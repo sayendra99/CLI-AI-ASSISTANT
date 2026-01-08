@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     
     openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
-    model: str = Field(default="gpt-3.5-turbo-preview", alias="MODEL")
+    model: str = Field(default="gpt-3.5-turbo", alias="MODEL")
     max_tokens: int = Field(default=2000, alias="MAX_TOKENS")
     temperature: float = Field(default=0.7, alias="TEMPERATURE")
     
