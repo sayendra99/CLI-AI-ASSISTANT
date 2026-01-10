@@ -73,7 +73,7 @@ class GeminiClient:
                         text = response.text
                     except ValueError as e:
                         logger.error(f"Response parsing error: {e}")
-                        text = "Resposes Blockes oops..."
+                        text = "Response was blocked or could not be parsed."
                     
                     usage_metadata = UsageMetadata(
                         prompt_tokens=response.metadata.input_token_count,
