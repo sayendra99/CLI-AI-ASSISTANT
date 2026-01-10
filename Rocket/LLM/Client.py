@@ -34,8 +34,7 @@ class GeminiClient:
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         generativeai.configure(api_key=settings.GEMINI_API_KEY)
-        self.client = generativeai.GenerativeModel(model_name=self.model_name)
-        
+
         #Safety Settings  will be permissive for coding use cases
         self.safety_setting={
             HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -74,7 +73,7 @@ class GeminiClient:
                         text = response.text
                     except ValueError as e:
                         logger.error(f"Response parsing error: {e}")
-                        text = "Resposes Blockes oops..."
+                        text = "Response was blocked or could not be parsed."
                     
                     usage_metadata = UsageMetadata(
                         prompt_tokens=response.metadata.input_token_count,
