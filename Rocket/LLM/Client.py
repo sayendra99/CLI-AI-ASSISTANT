@@ -4,7 +4,7 @@ from typing import AsyncIterator, List, Optional
 from contextlib import asynccontextmanager
 import time
 import google.generativeai as generativeai
-from google.generativeai import types, HarmBlockThreshold
+from google.generativeai import types, HarmBlockThreshold, HarmCategory
 from google.api_core import exceptions as google_exceptions
 
 from Rocket.LLM.Model import LLMResponse, LLMERROR, UsageMetadata
