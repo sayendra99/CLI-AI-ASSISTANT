@@ -94,8 +94,18 @@ async def handle_generate(
         language: Programming language
         stream: Whether to stream response
         output_file: Optional file to save output
+        
+    Raises:
+        ValueError: If description is empty or None
     """
     try:
+        # Validate inputs
+        if not description or not description.strip():
+            error_msg = "Description cannot be empty"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(f"handle_generate called with invalid description: {error_msg}")
+            raise ValueError(error_msg)
+        
         console.print(f"\n[cyan]🔧 Generating {language} code...[/cyan]\n")
         
         # Get dynamically configured client
@@ -130,14 +140,24 @@ async def handle_generate(
         
         # Save to file if requested
         if output_file:
-            with open(output_file, 'w') as f:
-                f.write(generated_code)
-            console.print(f"[green]✅ Code saved to: {output_file}[/green]")
+            try:
+                with open(output_file, 'w') as f:
+                    f.write(generated_code)
+                console.print(f"[green]✅ Code saved to: {output_file}[/green]")
+                logger.info(f"Generated code saved to: {output_file}")
+            except IOError as e:
+                console.print(f"[red]❌ Error saving file: {str(e)}[/red]")
+                logger.exception(f"Failed to save generated code to {output_file}")
+                raise
         
-        logger.info(f"Generated code for: {description[:50]}")
+        logger.info(f"Generated {language} code for: {description[:50]}")
         
+    except ValueError as e:
+        console.print(f"[red]❌ Validation error: {str(e)}[/red]")
+        logger.exception("Validation error in handle_generate")
+        raise
     except Exception as e:
-        console.print(f"[red]Error: {str(e)}[/red]")
+        console.print(f"[red]❌ Error: {str(e)}[/red]")
         logger.exception("Error in handle_generate")
         raise
 
@@ -154,13 +174,42 @@ async def handle_explain(
         file_path: Path to file to explain
         code_snippet: Code snippet to explain
         language: Programming language
+        
+    Raises:
+        ValueError: If neither file_path nor code_snippet is provided
+        FileNotFoundError: If file_path does not exist
     """
     try:
-        # Read file if provided
-        code_to_explain = code_snippet
+        # Validate inputs - at least one must be provided
+        if not file_path and not code_snippet:
+            error_msg = "Either file_path or code_snippet must be provided"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(f"handle_explain called with invalid inputs: {error_msg}")
+            raise ValueError(error_msg)
+        
+        # Read file if provided, otherwise use snippet
+        code_to_explain: str
         if file_path:
-            with open(file_path, 'r') as f:
-                code_to_explain = f.read()
+            try:
+                with open(file_path, 'r') as f:
+                    code_to_explain = f.read()
+                logger.info(f"Read code from file: {file_path}")
+            except FileNotFoundError:
+                error_msg = f"File not found: {file_path}"
+                console.print(f"[red]❌ Error: {error_msg}[/red]")
+                logger.error(error_msg)
+                raise
+        else:
+            # Use code_snippet (guaranteed non-None due to validation above)
+            code_to_explain = code_snippet
+            logger.info("Using provided code snippet")
+        
+        # Ensure code is not empty
+        if not code_to_explain or not code_to_explain.strip():
+            error_msg = "Code to explain cannot be empty"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         
         console.print(f"\n[cyan]📖 Analyzing {language} code...[/cyan]\n")
         
@@ -182,10 +231,17 @@ async def handle_explain(
         )
         
         console.print(Markdown(response.text))
-        logger.info(f"Explained code from: {file_path or 'snippet'}")
+        logger.info(f"Explained code from: {file_path or 'code snippet'}")
         
+    except ValueError as e:
+        console.print(f"[red]❌ Validation error: {str(e)}[/red]")
+        logger.exception("Validation error in handle_explain")
+        raise
+    except FileNotFoundError as e:
+        logger.exception("File not found in handle_explain")
+        raise
     except Exception as e:
-        console.print(f"[red]Error: {str(e)}[/red]")
+        console.print(f"[red]❌ Error: {str(e)}[/red]")
         logger.exception("Error in handle_explain")
         raise
 
@@ -204,19 +260,50 @@ async def handle_debug(
         file_path: File to debug
         language: Programming language
         stream: Whether to stream response
+        
+    Raises:
+        ValueError: If neither context nor file_path is provided
+        FileNotFoundError: If file_path does not exist
     """
     try:
+        # Validate inputs - at least one must be provided
+        if not context and not file_path:
+            error_msg = "Either context or file_path must be provided"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(f"handle_debug called with invalid inputs: {error_msg}")
+            raise ValueError(error_msg)
+        
         console.print(f"\n[cyan]🐛 Debugging {language} code...[/cyan]\n")
         
         # Get dynamically configured client
         llm_client = get_llm_client()
         
         # Prepare debugging info
-        debug_context = context
+        debug_context: str
         if file_path:
-            with open(file_path, 'r') as f:
-                code = f.read()
-            debug_context = f"File: {file_path}\n\nCode:\n```{language}\n{code}\n```\n\nError/Issue: {context}"
+            try:
+                with open(file_path, 'r') as f:
+                    code = f.read()
+                debug_context = f"File: {file_path}\n\nCode:\n```{language}\n{code}\n```"
+                if context:
+                    debug_context += f"\n\nError/Issue: {context}"
+                logger.info(f"Read code from file for debugging: {file_path}")
+            except FileNotFoundError:
+                error_msg = f"File not found: {file_path}"
+                console.print(f"[red]❌ Error: {error_msg}[/red]")
+                logger.error(error_msg)
+                raise
+        else:
+            # Use context (guaranteed non-None due to validation above)
+            debug_context = context
+            logger.info("Debugging with provided context")
+        
+        # Ensure debug context is not empty
+        if not debug_context or not debug_context.strip():
+            error_msg = "Debug context cannot be empty"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         
         system_instruction = (
             f"You are an expert {language} debugger. "
@@ -243,8 +330,15 @@ async def handle_debug(
         
         logger.info(f"Debugged: {context[:50] if context else file_path}")
         
+    except ValueError as e:
+        console.print(f"[red]❌ Validation error: {str(e)}[/red]")
+        logger.exception("Validation error in handle_debug")
+        raise
+    except FileNotFoundError as e:
+        logger.exception("File not found in handle_debug")
+        raise
     except Exception as e:
-        console.print(f"[red]Error: {str(e)}[/red]")
+        console.print(f"[red]❌ Error: {str(e)}[/red]")
         logger.exception("Error in handle_debug")
         raise
 
@@ -261,10 +355,43 @@ async def handle_optimize(
         file_path: File to optimize
         focus: What to focus on (performance, readability, security, maintainability)
         language: Programming language
+        
+    Raises:
+        FileNotFoundError: If file_path does not exist
+        ValueError: If focus is invalid or file is empty
     """
     try:
-        with open(file_path, 'r') as f:
-            code = f.read()
+        # Validate file exists
+        if not file_path or not file_path.strip():
+            error_msg = "File path cannot be empty"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        # Read and validate file
+        try:
+            with open(file_path, 'r') as f:
+                code = f.read()
+        except FileNotFoundError:
+            error_msg = f"File not found: {file_path}"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(error_msg)
+            raise
+        
+        # Validate code is not empty
+        if not code or not code.strip():
+            error_msg = f"File is empty: {file_path}"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        # Validate focus area
+        valid_focus = ["performance", "readability", "security", "maintainability"]
+        if focus.lower() not in valid_focus:
+            error_msg = f"Invalid focus area: {focus}. Must be one of {valid_focus}"
+            console.print(f"[red]❌ Error: {error_msg}[/red]")
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         
         console.print(f"\n[cyan]⚡ Optimizing {language} code for {focus}...[/cyan]\n")
         
@@ -293,8 +420,13 @@ async def handle_optimize(
         console.print(Markdown(response.text))
         logger.info(f"Optimized {file_path} for {focus}")
         
+    except (ValueError, FileNotFoundError) as e:
+        if isinstance(e, ValueError):
+            console.print(f"[red]❌ Validation error: {str(e)}[/red]")
+        logger.exception("Error in handle_optimize")
+        raise
     except Exception as e:
-        console.print(f"[red]Error: {str(e)}[/red]")
+        console.print(f"[red]❌ Error: {str(e)}[/red]")
         logger.exception("Error in handle_optimize")
         raise
 
