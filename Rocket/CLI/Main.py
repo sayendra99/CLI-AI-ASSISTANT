@@ -3,6 +3,7 @@ Rocket CLI - AI Coding Assistant
 Main entry point for CLI commands and routes handling user requests
 """
 
+import asyncio
 import logging
 import sys
 from typing import Optional
@@ -48,7 +49,8 @@ def chat(
         from Rocket.CLI.commands import handle_chat
         
         logger.info(f"💬 Chat command: {message[:60]}...")
-        handle_chat(message=message, stream=stream)
+        # Run async handler synchronously
+        asyncio.run(handle_chat(message=message, stream=stream))
         
     except Exception as e:
         console.print(f"[red]❌ Error in chat command: {str(e)}[/red]")
@@ -83,12 +85,13 @@ def generate(
             console.print("[red]❌ Error: Description cannot be empty[/red]")
             raise typer.Exit(1)
         
-        handle_generate(
+        # Run async handler synchronously
+        asyncio.run(handle_generate(
             description=description,
             language=language,
             stream=stream,
             output_file=output_file
-        )
+        ))
         
     except Exception as e:
         console.print(f"[red]❌ Error in generate command: {str(e)}[/red]")
@@ -125,11 +128,12 @@ def explain(
         
         logger.info(f"📖 Explain command: file={file or 'N/A'}, code_snippet={bool(code)}")
         
-        handle_explain(
+        # Run async handler synchronously
+        asyncio.run(handle_explain(
             file_path=file,
             code_snippet=code,
             language=language
-        )
+        ))
         
     except FileNotFoundError:
         console.print(f"[red]❌ Error: File not found: {file}[/red]")
@@ -167,12 +171,13 @@ def debug(
         
         logger.info(f"🐛 Debug command: context={bool(context)}, file={file or 'N/A'}")
         
-        handle_debug(
+        # Run async handler synchronously
+        asyncio.run(handle_debug(
             context=context,
             file_path=file,
             language=language,
             stream=stream
-        )
+        ))
         
     except FileNotFoundError:
         console.print(f"[red]❌ Error: File not found: {file}[/red]")
@@ -208,11 +213,12 @@ def optimize(
         
         logger.info(f"⚡ Optimize command: file={file}, focus={focus}")
         
-        handle_optimize(
+        # Run async handler synchronously
+        asyncio.run(handle_optimize(
             file_path=file,
             focus=focus,
             language=language
-        )
+        ))
         
     except FileNotFoundError:
         console.print(f"[red]❌ Error: File not found: {file}[/red]")
