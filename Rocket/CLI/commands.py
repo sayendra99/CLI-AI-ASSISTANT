@@ -14,11 +14,23 @@ from Rocket.Utils.Config import settings
 logger = logging.getLogger(__name__)
 console = Console()
 
-# Initialize LLM client
-llm_client = GeminiClient(
-    model_name="gemini-1.5-flash",
-    temperature=0.7
-)
+
+def get_llm_client() -> GeminiClient:
+    """
+    Get configured LLM client with settings applied.
+    
+    Constructs a new client on each call to respect dynamic configuration changes.
+    This ensures that settings modifications via handle_config take effect immediately.
+    
+    Returns:
+        Configured GeminiClient instance with current settings
+    """
+    return GeminiClient(
+        model_name=settings.gemini_model,
+        temperature=settings.temperature,
+        max_retries=settings.max_retries,
+        retry_delay=settings.retry_delay
+    )
 
 
 async def handle_chat(message: str, stream: bool = False) -> None:
@@ -31,6 +43,9 @@ async def handle_chat(message: str, stream: bool = False) -> None:
     """
     try:
         console.print(f"\n[cyan]🚀 Rocket:[/cyan]", end=" ")
+        
+        # Get dynamically configured client
+        llm_client = get_llm_client()
         
         system_instruction = (
             "You are Rocket, an expert AI coding assistant. "
@@ -82,6 +97,9 @@ async def handle_generate(
     """
     try:
         console.print(f"\n[cyan]🔧 Generating {language} code...[/cyan]\n")
+        
+        # Get dynamically configured client
+        llm_client = get_llm_client()
         
         system_instruction = (
             f"You are an expert {language} developer. "
@@ -146,6 +164,9 @@ async def handle_explain(
         
         console.print(f"\n[cyan]📖 Analyzing {language} code...[/cyan]\n")
         
+        # Get dynamically configured client
+        llm_client = get_llm_client()
+        
         system_instruction = (
             f"You are an expert {language} code analyst. "
             "Explain the code clearly, line by line. "
@@ -186,6 +207,9 @@ async def handle_debug(
     """
     try:
         console.print(f"\n[cyan]🐛 Debugging {language} code...[/cyan]\n")
+        
+        # Get dynamically configured client
+        llm_client = get_llm_client()
         
         # Prepare debugging info
         debug_context = context
@@ -244,6 +268,9 @@ async def handle_optimize(
         
         console.print(f"\n[cyan]⚡ Optimizing {language} code for {focus}...[/cyan]\n")
         
+        # Get dynamically configured client
+        llm_client = get_llm_client()
+        
         system_instruction = (
             f"You are an expert {language} code optimizer. "
             f"Focus on improving {focus}. "
@@ -280,30 +307,69 @@ def handle_config(
     """
     Handle config command - manage settings.
     
+    Allows viewing and modifying LLM configuration settings.
+    
     Args:
         action: show, set, or reset
-        key: Config key
-        value: Config value
+        key: Config key to set
+        value: Config value to set
     """
     try:
         if action == "show":
             console.print("\n[cyan]⚙️  Rocket Configuration:[/cyan]")
-            console.print(f"  API Key: {'[green]✅ Set[/green]' if settings.GEMINI_API_KEY else '[red]❌ Not set[/red]'}")
-            console.print(f"  Model: {settings.get('MODEL', 'gemini-1.5-flash')}")
-            console.print(f"  Temperature: {settings.get('TEMPERATURE', 0.7)}")
+            console.print(f"  API Key: {'[green]✅ Set[/green]' if settings.gemini_api_key else '[red]❌ Not set[/red]'}")
+            console.print(f"  Model: [cyan]{settings.gemini_model}[/cyan]")
+            console.print(f"  Temperature: [cyan]{settings.temperature}[/cyan]")
+            console.print(f"  Max Retries: [cyan]{settings.max_retries}[/cyan]")
+            console.print(f"  Retry Delay: [cyan]{settings.retry_delay}s[/cyan]")
+            console.print()
             
         elif action == "set":
             if not key or not value:
-                console.print("[red]Error: Provide both --key and --value[/red]")
+                console.print("[red]❌ Error: Provide both --key and --value[/red]")
                 return
-            console.print(f"[yellow]Setting {key} = {value}[/yellow]")
-            # TODO: Implement persistent config storage
-            console.print("[green]✅ Configuration updated[/green]")
+            
+            # Validate and set configuration
+            valid_keys = {
+                "model": "gemini_model",
+                "temperature": "temperature",
+                "max_retries": "max_retries",
+                "retry_delay": "retry_delay",
+                "api_key": "gemini_api_key"
+            }
+            
+            if key.lower() not in valid_keys:
+                console.print(f"[red]❌ Error: Unknown config key '{key}'[/red]")
+                console.print(f"[yellow]Valid keys: {', '.join(valid_keys.keys())}[/yellow]")
+                return
+            
+            attr_name = valid_keys[key.lower()]
+            
+            # Type conversion for numeric fields
+            try:
+                if attr_name == "temperature":
+                    value = float(value)
+                elif attr_name == "max_retries":
+                    value = int(value)
+                elif attr_name == "retry_delay":
+                    value = float(value)
+            except ValueError:
+                console.print(f"[red]❌ Error: Invalid value type for {key}[/red]")
+                return
+            
+            # Set the attribute
+            setattr(settings, attr_name, value)
+            console.print(f"[green]✅ Configuration updated: {key} = {value}[/green]")
+            logger.info(f"Configuration changed: {key} = {value}")
             
         elif action == "reset":
-            console.print("[yellow]Resetting to default configuration...[/yellow]")
-            # TODO: Implement config reset
-            console.print("[green]✅ Configuration reset[/green]")
+            console.print("[yellow]⚠️  Resetting to default configuration...[/yellow]")
+            settings.gemini_model = "gemini-1.5-flash"
+            settings.temperature = 0.7
+            settings.max_retries = 3
+            settings.retry_delay = 1.0
+            console.print("[green]✅ Configuration reset to defaults[/green]")
+            logger.info("Configuration reset to defaults")
         
     except Exception as e:
         console.print(f"[red]Error: {str(e)}[/red]")
