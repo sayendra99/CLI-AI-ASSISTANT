@@ -75,7 +75,6 @@ class BaseMode(ABC):
         """
         pass
     
-    @abstractmethod
     def get_llm_settings(self) -> Dict[str, Any]:
         """
         Get LLM client settings for this mode.

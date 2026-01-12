@@ -4,14 +4,14 @@ from typing import AsyncIterator, List, Optional
 from contextlib import asynccontextmanager
 import time
 import google.generativeai as generativeai
-from google.generativeai import types, HarmBlockThreshold, HarmCategory
+from google.generativeai import types
 from google.api_core import exceptions as google_exceptions
 
 from Rocket.LLM.Model import LLMResponse, LLMERROR, UsageMetadata
 from Rocket.Utils.Config import settings
-from Rocket.Utils.Logger import logger
+from Rocket.Utils.Log import get_logger
 
-logger = logger(__name__)
+logger = get_logger(__name__)
 
 class GeminiClient:
     """Production-ready Gemini API Client.

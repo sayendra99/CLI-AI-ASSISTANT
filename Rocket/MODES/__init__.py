@@ -4,17 +4,17 @@ Operating modes module for Rocket CLI.
 Provides different behavioral modes optimized for specific tasks.
 """
 
-from rocket.modes.base import BaseMode, ModeConfig
-from rocket.modes.registry import ModeRegistry
-from rocket.modes.selector import ModeSelector
+from Rocket.MODES.Base import BaseMode, ModeConfig
+from Rocket.MODES.Register import ModeRegistry
+from Rocket.MODES.Selectors import ModeSelector
 
 # Import concrete modes
-from rocket.modes.read_mode import ReadMode
-from rocket.modes.debug_mode import DebugMode
-from rocket.modes.think_mode import ThinkMode
-from rocket.modes.agent_mode import AgentMode
-from rocket.modes.enhance_mode import EnhanceMode
-from rocket.modes.analyze_mode import AnalyzeMode
+from Rocket.MODES.Read_mode import ReadMode
+from Rocket.MODES.Debug_mode import DebugMode
+from Rocket.MODES.Think_mode import ThinkMode
+from Rocket.MODES.Agent_mode import AgentMode
+from Rocket.MODES.Enhancement_mode import EnhanceMode
+from Rocket.MODES.Analyze_mode import AnalyzeMode
 
 # Create global registry
 mode_registry = ModeRegistry()
