@@ -34,4 +34,17 @@ def setup_logger(name: str = "rocket", level: int = logging.INFO) -> logging.Log
     return logger
 
 
+def get_logger(name: str = "rocket") -> logging.Logger:
+    """
+    Get a logger instance with the given name.
+    
+    Args:
+        name: Logger name (usually __name__)
+        
+    Returns:
+        Configured logger instance
+    """
+    return setup_logger(name)
+
+
 logger = setup_logger()
