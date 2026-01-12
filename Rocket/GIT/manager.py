@@ -2,7 +2,6 @@
 handles all git interactions: branching, committing , status checks."""
 
 import subprocess
-import shlex
 from typing import Optional,List
 from pathlib import Path
 from dataclasses import dataclass
@@ -25,7 +24,6 @@ class GitError(Exception):
     pass
 
 
-@dataclass
 class GitManager:
     """Manages Git operations for Rocket AI Assistant.
     
@@ -35,7 +33,6 @@ class GitManager:
     - Commit operations
     - Safety checks
     """
-    repo_path: Path
     
     PRODUCTION_BRANCHES = ['main', 'master', 'production', 'prod', 'release']
     
@@ -109,15 +106,12 @@ class GitManager:
                 logger.warning(f"Branch exists, using: {branch_name}")
             
             # Create and checkout branch
-            # Sanitize branch names to prevent command injection
-            safe_branch_name = shlex.quote(branch_name)
             if base_branch:
-                safe_base_branch = shlex.quote(base_branch)
-                cmd = ['git', 'checkout', '-b', safe_branch_name, safe_base_branch]
+                cmd = ['git', 'checkout', '-b', branch_name, base_branch]
             else:
-                cmd = ['git', 'checkout', '-b', safe_branch_name]
+                cmd = ['git', 'checkout', '-b', branch_name]
             
-            result = subprocess.run(
+            subprocess.run(
                 cmd,
                 cwd=self.repo_path,
                 capture_output=True,
@@ -129,7 +123,7 @@ class GitManager:
             return branch_name
         
         except subprocess.CalledProcessError as e:
-            raise GitError(f"Failed to create branch: {e.stderr.strip()}")from e
+            raise GitError(f"Failed to create branch: {e.stderr.strip()}") from e
     
     def commit_changes(
         self,
@@ -151,10 +145,9 @@ class GitManager:
             GitError: If commit fails
         """
         try:
-            # Stage files - sanitize file paths
-            safe_files = [shlex.quote(f) for f in files]
+            # Stage files
             subprocess.run(
-                ['git', 'add'] + safe_files,
+                ['git', 'add'] + files,
                 cwd=self.repo_path,
                 check=True
             )
@@ -191,9 +184,7 @@ class GitManager:
         try:
             cmd = ['git', 'stash']
             if message:
-                # Sanitize stash message to prevent command injection
-                safe_message = shlex.quote(message)
-                cmd.extend(['save', safe_message])
+                cmd.extend(['save', message])
             
             result = subprocess.run(
                 cmd,

@@ -1,7 +1,7 @@
-""" Git integeration module for Rocket AI Assistant """
+"""Git integration module for Rocket AI Assistant."""
 
-from Rocket.git.manager import GitManager
-from Rocket.git.branch_namer import BranchNamer
-from Rocket.git.pr_creator import PRCreator
+from Rocket.GIT.manager import GitManager
+from Rocket.GIT.branch_namer import BranchNamer
+from Rocket.GIT.pr_creator import PRCreator
 
 __all__ = ["GitManager","BranchNamer","PRCreator"]
