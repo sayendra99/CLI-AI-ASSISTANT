@@ -2,6 +2,7 @@
 handles all git interactions: branching, committing , status checks."""
 
 import subprocess
+import shlex
 from typing import Optional,List
 from pathlib import Path
 from dataclasses import dataclass
@@ -108,10 +109,13 @@ class GitManager:
                 logger.warning(f"Branch exists, using: {branch_name}")
             
             # Create and checkout branch
+            # Sanitize branch names to prevent command injection
+            safe_branch_name = shlex.quote(branch_name)
             if base_branch:
-                cmd = ['git', 'checkout', '-b', branch_name, base_branch]
+                safe_base_branch = shlex.quote(base_branch)
+                cmd = ['git', 'checkout', '-b', safe_branch_name, safe_base_branch]
             else:
-                cmd = ['git', 'checkout', '-b', branch_name]
+                cmd = ['git', 'checkout', '-b', safe_branch_name]
             
             result = subprocess.run(
                 cmd,
@@ -147,9 +151,10 @@ class GitManager:
             GitError: If commit fails
         """
         try:
-            # Stage files
+            # Stage files - sanitize file paths
+            safe_files = [shlex.quote(f) for f in files]
             subprocess.run(
-                ['git', 'add'] + files,
+                ['git', 'add'] + safe_files,
                 cwd=self.repo_path,
                 check=True
             )
@@ -186,7 +191,9 @@ class GitManager:
         try:
             cmd = ['git', 'stash']
             if message:
-                cmd.extend(['save', message])
+                # Sanitize stash message to prevent command injection
+                safe_message = shlex.quote(message)
+                cmd.extend(['save', safe_message])
             
             result = subprocess.run(
                 cmd,
@@ -292,11 +299,8 @@ class GitManager:
                 check=True
             )
             
-            files = []
-            for line in result.stdout.splitlines():
-                if line.strip():
-                    # Format: "MM filename" or "M filename"
-                    files.append(line[3:].strip())
+            # Sanitize file paths to prevent command injection
+            files = [line[3:].strip() for line in result.stdout.splitlines() if line.strip()]
             
             return files
         
