@@ -97,6 +97,15 @@ class GitManager:
             GitError: If branch creation fails
         """
         try:
+            # Validate branch names - only allow alphanumeric, hyphens, underscores, slashes
+            import re
+            branch_pattern = r'^[a-zA-Z0-9._/-]+$'
+            if not re.match(branch_pattern, branch_name):
+                raise GitError(f"Invalid branch name: {branch_name}. Use only alphanumeric, hyphens, underscores, dots, or slashes.")
+            
+            if base_branch and not re.match(branch_pattern, base_branch):
+                raise GitError(f"Invalid base branch name: {base_branch}. Use only alphanumeric, hyphens, underscores, dots, or slashes.")
+            
             # Check if branch exists
             if self._branch_exists(branch_name):
                 # Generate unique name
@@ -105,7 +114,7 @@ class GitManager:
                 branch_name = f"{branch_name}-{timestamp}"
                 logger.warning(f"Branch exists, using: {branch_name}")
             
-            # Create and checkout branch
+            # Create and checkout branch - using list prevents shell injection
             if base_branch:
                 cmd = ['git', 'checkout', '-b', branch_name, base_branch]
             else:
@@ -116,7 +125,8 @@ class GitManager:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=False
             )
             
             logger.info(f"Created branch: {branch_name}")
@@ -145,11 +155,18 @@ class GitManager:
             GitError: If commit fails
         """
         try:
-            # Stage files
+            # Validate file paths to prevent path traversal attacks
+            for f in files:
+                # Ensure no suspicious path patterns
+                if '..' in f or f.startswith('/'):
+                    raise GitError(f"Invalid file path: {f}")
+            
+            # Stage files - using list prevents shell injection
             subprocess.run(
                 ['git', 'add'] + files,
                 cwd=self.repo_path,
-                check=True
+                check=True,
+                shell=False
             )
             
             # Build commit message
@@ -163,7 +180,8 @@ class GitManager:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=False
             )
             
             logger.info(f"Committed changes: {result.stdout.strip()}")
@@ -191,7 +209,8 @@ class GitManager:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=False
             )
             
             # Check if anything was stashed
@@ -225,7 +244,8 @@ class GitManager:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=False
             )
             
             return result.stdout
@@ -242,7 +262,8 @@ class GitManager:
                 ['git', 'rev-parse', '--git-dir'],
                 cwd=self.repo_path,
                 capture_output=True,
-                check=True
+                check=True,
+                shell=False
             )
             return True
         
@@ -257,7 +278,8 @@ class GitManager:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=False
             )
             return result.stdout.strip()
         
@@ -272,7 +294,8 @@ class GitManager:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=False
             )
             return len(result.stdout.strip()) == 0
         
@@ -287,10 +310,11 @@ class GitManager:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=False
             )
             
-            # Sanitize file paths to prevent command injection
+            # Parse git status output - format: "MM filename" or "M filename"
             files = [line[3:].strip() for line in result.stdout.splitlines() if line.strip()]
             
             return files
@@ -305,7 +329,8 @@ class GitManager:
                 ['git', 'show-ref', '--verify', f'refs/heads/{branch_name}'],
                 cwd=self.repo_path,
                 capture_output=True,
-                check=True
+                check=True,
+                shell=False
             )
             return True
         
@@ -320,7 +345,8 @@ class GitManager:
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=False
             )
             return result.stdout.strip()
         
