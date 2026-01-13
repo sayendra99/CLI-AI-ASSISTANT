@@ -5,7 +5,7 @@ import subprocess
 from typing import Optional,List
 from pathlib import Path
 from dataclasses import dataclass
-from Rocket.Utils.logger import get_logger
+from Rocket.Utils.Log import get_logger
 logger = get_logger(__name__)
 
 
