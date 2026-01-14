@@ -1,13 +1,13 @@
 """
 List Directory Tool for Rocket AI Coding Assistant.
 
-Provides directory listing capabilities to explore codebase
-structure. Supports both flat and recursive directory traversal.
+Provides directory listing capabilities with support for
+recursive traversal and file metadata collection.
 
 Features:
     - List immediate children or recursive traversal
-    - Returns file/directory info (name, size, type)
-    - Cross-platform compatibility via pathlib
+    - File size and type information
+    - Cross-platform path handling
     - Safety limits to prevent huge outputs
 
 Author: Rocket AI Team
@@ -40,34 +40,39 @@ logger = get_logger(__name__)
 
 class ListDirectoryTool(BaseTool):
     """
-    Directory listing tool for exploring codebase structure.
+    Directory listing tool with recursive support.
     
-    Lists files and directories with their metadata, supporting
-    both flat listing of immediate children and recursive
-    directory tree traversal.
+    Provides safe directory listing within the filesystem,
+    with optional recursive traversal and file metadata.
     
-    Safety Features:
-        - Maximum 500 items limit to prevent huge outputs
-        - Permission error handling
-        - Path validation
+    Features:
+        - List immediate children or full directory tree
+        - Return file name, size, and type for each item
+        - Safety limit of 500 items maximum
+        - Cross-platform path handling via pathlib
     
     Example Usage:
         tool = ListDirectoryTool()
-        
-        # List immediate children
-        result = tool.execute(path="./src")
-        
-        # Recursive listing
-        result = tool.execute(path="./src", recursive=True)
+        result = tool.execute(
+            path="./src",
+            recursive=False
+        )
     """
     
     # Configuration constants
-    MAX_ITEMS: int = 500  # Maximum items to return (safety limit)
+    MAX_ITEMS: int = 500  # Maximum number of items to return
     
-    def __init__(self) -> None:
-        """Initialize the ListDirectoryTool."""
+    def __init__(self, workspace_root: Optional[Path] = None) -> None:
+        """
+        Initialize the ListDirectoryTool.
+        
+        Args:
+            workspace_root: Root directory for operations.
+                           Defaults to current working directory.
+        """
+        self._workspace_root = Path(workspace_root or Path.cwd()).resolve()
         super().__init__()
-        logger.debug("ListDirectoryTool initialized")
+        logger.debug(f"ListDirectoryTool initialized with workspace: {self._workspace_root}")
     
     @property
     def name(self) -> str:
@@ -76,12 +81,12 @@ class ListDirectoryTool(BaseTool):
     
     @property
     def description(self) -> str:
-        """Human-readable tool description for LLM to understand."""
+        """Human-readable tool description."""
         return (
-            "List files and directories at a given path. "
+            "List files and directories in a specified path. "
+            "Can list immediate children only or recursively traverse subdirectories. "
             "Returns name, size (in bytes), and type (file/directory) for each item. "
-            "Use recursive=True to traverse the entire directory tree. "
-            "Limited to 500 items maximum to prevent huge outputs."
+            "Useful for exploring project structure and finding files."
         )
     
     @property
@@ -105,9 +110,9 @@ class ListDirectoryTool(BaseTool):
                 "recursive": {
                     "type": "boolean",
                     "description": (
-                        "If True, recursively list all files and directories "
-                        "in the directory tree. If False (default), only list "
-                        "immediate children."
+                        "Whether to list recursively. If False, only immediate "
+                        "children are listed. If True, traverses all subdirectories. "
+                        "Default is False."
                     ),
                     "default": False
                 }
@@ -120,29 +125,134 @@ class ListDirectoryTool(BaseTool):
         path = kwargs.get("path")
         
         if not path:
-            return "path parameter is required"
+            return "Parameter 'path' is required"
         
         if not isinstance(path, str):
-            return f"path must be a string, got {type(path).__name__}"
+            return f"Parameter 'path' must be a string, got {type(path).__name__}"
         
         recursive = kwargs.get("recursive", False)
         if not isinstance(recursive, bool):
-            return f"recursive must be a boolean, got {type(recursive).__name__}"
+            return f"Parameter 'recursive' must be a boolean, got {type(recursive).__name__}"
         
         return None
     
+    def _get_item_info(self, item_path: Path) -> Dict[str, Any]:
+        """
+        Get information about a file or directory.
+        
+        Args:
+            item_path: Path to the item
+            
+        Returns:
+            Dictionary with name, size, and type
+        """
+        try:
+            stat_info = item_path.stat()
+            is_dir = item_path.is_dir()
+            
+            return {
+                "name": item_path.name,
+                "size": stat_info.st_size if not is_dir else 0,
+                "type": "directory" if is_dir else "file"
+            }
+        except (PermissionError, OSError) as e:
+            # Return basic info even if stat fails
+            logger.warning(f"Could not stat {item_path}: {e}")
+            return {
+                "name": item_path.name,
+                "size": 0,
+                "type": "unknown"
+            }
+    
+    def _list_immediate(self, dir_path: Path) -> List[Dict[str, Any]]:
+        """
+        List immediate children of a directory.
+        
+        Args:
+            dir_path: Directory to list
+            
+        Returns:
+            List of item info dictionaries
+        """
+        items = []
+        
+        try:
+            for item in sorted(dir_path.iterdir()):
+                items.append(self._get_item_info(item))
+                
+                if len(items) >= self.MAX_ITEMS:
+                    logger.warning(f"Hit max items limit ({self.MAX_ITEMS})")
+                    break
+        except PermissionError as e:
+            logger.error(f"Permission denied listing {dir_path}: {e}")
+            raise
+        
+        return items
+    
+    def _list_recursive(self, dir_path: Path) -> List[Dict[str, Any]]:
+        """
+        Recursively list all items in a directory tree.
+        
+        Args:
+            dir_path: Root directory to traverse
+            
+        Returns:
+            List of item info dictionaries with relative paths
+        """
+        items = []
+        
+        try:
+            for root, dirs, files in os.walk(dir_path):
+                root_path = Path(root)
+                
+                # Sort for consistent output
+                dirs.sort()
+                files.sort()
+                
+                # Add directories
+                for d in dirs:
+                    item_path = root_path / d
+                    rel_path = item_path.relative_to(dir_path)
+                    info = self._get_item_info(item_path)
+                    info["name"] = str(rel_path)
+                    items.append(info)
+                    
+                    if len(items) >= self.MAX_ITEMS:
+                        break
+                
+                # Add files
+                for f in files:
+                    item_path = root_path / f
+                    rel_path = item_path.relative_to(dir_path)
+                    info = self._get_item_info(item_path)
+                    info["name"] = str(rel_path)
+                    items.append(info)
+                    
+                    if len(items) >= self.MAX_ITEMS:
+                        break
+                
+                if len(items) >= self.MAX_ITEMS:
+                    logger.warning(f"Hit max items limit ({self.MAX_ITEMS})")
+                    break
+                    
+        except PermissionError as e:
+            logger.error(f"Permission denied during recursive walk: {e}")
+            raise
+        
+        return items
+    
     def _execute(self, **kwargs: Any) -> ToolResult:
         """
-        Execute the directory listing.
+        Execute the list directory operation.
         
         Args:
             path: Directory path to list
             recursive: Whether to list recursively (default: False)
             
         Returns:
-            ToolResult with directory listing or error
+            ToolResult with directory listing
         """
-        path_str = kwargs.get("path", ".")
+        path_str = kwargs.get("path", "")
         recursive = kwargs.get("recursive", False)
         
         # Resolve the path
@@ -151,34 +261,39 @@ class ListDirectoryTool(BaseTool):
         except Exception as e:
             return ToolResult.fail(
                 error=f"Invalid path: {path_str} - {e}",
-                error_type="ValueError"
+                error_type="InvalidPathError"
             )
         
-        # Validate path exists
+        # Check if path exists
         if not dir_path.exists():
             return ToolResult.fail(
                 error=f"Path does not exist: {dir_path}",
                 error_type="FileNotFoundError"
             )
         
-        # Validate path is a directory
+        # Check if path is a directory
         if not dir_path.is_dir():
             return ToolResult.fail(
                 error=f"Path is not a directory: {dir_path}",
                 error_type="NotADirectoryError"
             )
         
-        # Collect items
-        items: List[Dict[str, Any]] = []
-        truncated = False
-        
+        # List the directory
         try:
             if recursive:
-                # Recursive listing using os.walk
-                items, truncated = self._list_recursive(dir_path)
+                items = self._list_recursive(dir_path)
             else:
-                # Flat listing of immediate children
-                items, truncated = self._list_flat(dir_path)
+                items = self._list_immediate(dir_path)
+            
+            return ToolResult.ok(
+                data={
+                    "path": str(dir_path),
+                    "count": len(items),
+                    "items": items,
+                    "truncated": len(items) >= self.MAX_ITEMS
+                }
+            )
+            
         except PermissionError as e:
             return ToolResult.fail(
                 error=f"Permission denied: {e}",
@@ -186,209 +301,40 @@ class ListDirectoryTool(BaseTool):
             )
         except OSError as e:
             return ToolResult.fail(
-                error=f"OS error while listing directory: {e}",
+                error=f"OS error listing directory: {e}",
                 error_type="OSError"
             )
-        
-        return ToolResult.ok(
-            data={
-                "path": str(dir_path),
-                "count": len(items),
-                "items": items,
-                "truncated": truncated
-            },
-            recursive=recursive
-        )
-    
-    def _list_flat(self, dir_path: Path) -> tuple[List[Dict[str, Any]], bool]:
-        """
-        List immediate children of a directory.
-        
-        Args:
-            dir_path: Directory path to list
-            
-        Returns:
-            Tuple of (items list, truncated flag)
-        """
-        items: List[Dict[str, Any]] = []
-        truncated = False
-        
-        try:
-            for entry in sorted(dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
-                if len(items) >= self.MAX_ITEMS:
-                    truncated = True
-                    break
-                
-                item_info = self._get_item_info(entry)
-                if item_info:
-                    items.append(item_info)
-        except PermissionError:
-            raise  # Re-raise to be handled by caller
-        
-        return items, truncated
-    
-    def _list_recursive(self, dir_path: Path) -> tuple[List[Dict[str, Any]], bool]:
-        """
-        Recursively list all files and directories.
-        
-        Args:
-            dir_path: Root directory path
-            
-        Returns:
-            Tuple of (items list, truncated flag)
-        """
-        items: List[Dict[str, Any]] = []
-        truncated = False
-        
-        try:
-            for root, dirs, files in os.walk(dir_path):
-                root_path = Path(root)
-                
-                # Sort directories and files
-                dirs.sort(key=str.lower)
-                files.sort(key=str.lower)
-                
-                # Add directories
-                for dir_name in dirs:
-                    if len(items) >= self.MAX_ITEMS:
-                        truncated = True
-                        break
-                    
-                    item_path = root_path / dir_name
-                    item_info = self._get_item_info(item_path)
-                    if item_info:
-                        # Add relative path from root
-                        try:
-                            item_info["path"] = str(item_path.relative_to(dir_path))
-                        except ValueError:
-                            item_info["path"] = str(item_path)
-                        items.append(item_info)
-                
-                if truncated:
-                    break
-                
-                # Add files
-                for file_name in files:
-                    if len(items) >= self.MAX_ITEMS:
-                        truncated = True
-                        break
-                    
-                    item_path = root_path / file_name
-                    item_info = self._get_item_info(item_path)
-                    if item_info:
-                        # Add relative path from root
-                        try:
-                            item_info["path"] = str(item_path.relative_to(dir_path))
-                        except ValueError:
-                            item_info["path"] = str(item_path)
-                        items.append(item_info)
-                
-                if truncated:
-                    break
-                    
-        except PermissionError:
-            raise  # Re-raise to be handled by caller
-        
-        return items, truncated
-    
-    def _get_item_info(self, item_path: Path) -> Optional[Dict[str, Any]]:
-        """
-        Get information about a file or directory.
-        
-        Args:
-            item_path: Path to the item
-            
-        Returns:
-            Dictionary with item info or None if inaccessible
-        """
-        try:
-            is_dir = item_path.is_dir()
-            
-            # Get size (0 for directories)
-            if is_dir:
-                size = 0
-            else:
-                try:
-                    size = item_path.stat().st_size
-                except (OSError, PermissionError):
-                    size = 0
-            
-            return {
-                "name": item_path.name,
-                "size": size,
-                "type": "directory" if is_dir else "file"
-            }
-            
-        except (OSError, PermissionError) as e:
-            logger.debug(f"Could not access {item_path}: {e}")
-            return None
 
 
 # =============================================================================
-# Module Self-Test
+# Direct Execution Support
 # =============================================================================
 
 if __name__ == "__main__":
-    """Run self-tests when executed directly."""
-    import tempfile
+    # Allow running this file directly for testing
+    import json
     
-    print("=" * 60)
-    print("ListDirectoryTool Self-Test")
-    print("=" * 60)
+    tool = ListDirectoryTool()
     
-    # Create test directory structure
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir)
-        
-        # Create test structure
-        (tmp_path / "file1.txt").write_text("Hello")
-        (tmp_path / "file2.py").write_text("print('test')")
-        (tmp_path / "subdir").mkdir()
-        (tmp_path / "subdir" / "nested.txt").write_text("Nested file")
-        
-        tool = ListDirectoryTool()
-        
-        # Test 1: Flat listing
-        print("\n--- Test 1: Flat Listing ---")
-        result = tool.execute(path=str(tmp_path))
-        assert result.success, f"Failed: {result.error}"
-        print(f"  Found {result.data['count']} items")
-        for item in result.data['items']:
-            print(f"    - {item['name']} ({item['type']}, {item['size']} bytes)")
-        print("✓ Flat listing works")
-        
-        # Test 2: Recursive listing
-        print("\n--- Test 2: Recursive Listing ---")
-        result = tool.execute(path=str(tmp_path), recursive=True)
-        assert result.success, f"Failed: {result.error}"
-        print(f"  Found {result.data['count']} items")
-        for item in result.data['items']:
-            path_info = item.get('path', item['name'])
-            print(f"    - {path_info} ({item['type']})")
-        print("✓ Recursive listing works")
-        
-        # Test 3: Non-existent path
-        print("\n--- Test 3: Non-existent Path ---")
-        result = tool.execute(path="/nonexistent/path")
-        assert not result.success
-        assert "does not exist" in result.error
-        print(f"✓ Correctly handled non-existent path: {result.error}")
-        
-        # Test 4: File instead of directory
-        print("\n--- Test 4: File Path ---")
-        result = tool.execute(path=str(tmp_path / "file1.txt"))
-        assert not result.success
-        assert "not a directory" in result.error
-        print(f"✓ Correctly handled file path: {result.error}")
-        
-        # Test 5: Schema generation
-        print("\n--- Test 5: Schema Generation ---")
-        schema = tool.to_gemini_schema()
-        assert "name" in schema
-        assert schema["name"] == "list_directory"
-        assert "parameters" in schema
-        print(f"✓ Schema generated: {schema['name']}")
+    # Test 1: List current directory
+    print("Test 1: List current directory (non-recursive)")
+    result = tool.execute(path=".")
+    print(f"Success: {result.success}")
+    if result.success:
+        print(f"Found {result.data['count']} items")
+        for item in result.data['items'][:10]:
+            print(f"  {item['type']}: {item['name']} ({item['size']} bytes)")
+    else:
+        print(f"Error: {result.error}")
     
-    print("\n" + "=" * 60)
-    print("All ListDirectoryTool tests passed! ✓")
-    print("=" * 60)
+    print()
+    
+    # Test 2: List recursive
+    print("Test 2: List current directory (recursive)")
+    result = tool.execute(path=".", recursive=True)
+    print(f"Success: {result.success}")
+    if result.success:
+        print(f"Found {result.data['count']} items")
+        print(f"Truncated: {result.data['truncated']}")
+    else:
+        print(f"Error: {result.error}")

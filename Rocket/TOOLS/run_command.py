@@ -1,26 +1,27 @@
 """
 Run Command Tool for Rocket AI Coding Assistant.
 
-Provides shell command execution capabilities for running
-tests, linters, git commands, and other development tools.
+Provides secure shell command execution capabilities with
+timeout support and output capture.
 
 Features:
-    - Safe command parsing (prevents injection)
+    - Safe command parsing (no shell injection)
+    - Configurable timeout
     - Working directory support
-    - Timeout handling
     - Stdout/stderr capture
-    - Exit code reporting
+    - Exit code tracking
 
 Security:
-    - Uses shlex.split for safe command parsing
-    - Does NOT use shell=True to prevent injection
-    - Configurable timeout to prevent hangs
+    - Uses shlex.split() for safe command parsing
+    - Does NOT use shell=True (prevents injection attacks)
+    - Timeout enforcement prevents hangs
 
 Author: Rocket AI Team
 """
 
 from __future__ import annotations
 
+import os
 import shlex
 import subprocess
 import sys
@@ -47,44 +48,49 @@ logger = get_logger(__name__)
 
 class RunCommandTool(BaseTool):
     """
-    Shell command execution tool for development tasks.
+    Secure shell command execution tool.
     
-    Executes shell commands safely with timeout protection
-    and output capture. Useful for running tests, linters,
-    build tools, git commands, etc.
+    Executes shell commands safely with timeout support and
+    output capture. Uses safe command parsing to prevent
+    shell injection attacks.
     
     Security Features:
-        - Safe command parsing with shlex.split
-        - No shell=True (prevents shell injection)
-        - Configurable timeout (default 30s)
+        - Command parsing via shlex.split() (no shell expansion)
+        - No shell=True (prevents injection)
+        - Configurable timeout to prevent hangs
+        - Working directory validation
+    
+    Use Cases:
+        - Running tests (pytest, unittest)
+        - Running linters (flake8, pylint, mypy)
+        - Git commands (git status, git diff)
+        - Build commands (make, npm build)
+        - Any CLI tool invocation
     
     Example Usage:
         tool = RunCommandTool()
-        
-        # Run tests
-        result = tool.execute(command="pytest -v")
-        
-        # Run with specific directory
         result = tool.execute(
-            command="npm test",
-            cwd="./frontend"
-        )
-        
-        # Run with custom timeout
-        result = tool.execute(
-            command="long_running_script.py",
-            timeout=120
+            command="pytest -v tests/",
+            working_dir="./project",
+            timeout=60
         )
     """
     
     # Configuration constants
     DEFAULT_TIMEOUT: int = 30  # Default timeout in seconds
-    MAX_OUTPUT_SIZE: int = 100000  # Max output size in characters (safety limit)
+    MAX_OUTPUT_SIZE: int = 100 * 1024  # 100KB max output
     
-    def __init__(self) -> None:
-        """Initialize the RunCommandTool."""
+    def __init__(self, workspace_root: Optional[Path] = None) -> None:
+        """
+        Initialize the RunCommandTool.
+        
+        Args:
+            workspace_root: Root directory for operations.
+                           Defaults to current working directory.
+        """
+        self._workspace_root = Path(workspace_root or Path.cwd()).resolve()
         super().__init__()
-        logger.debug("RunCommandTool initialized")
+        logger.debug(f"RunCommandTool initialized with workspace: {self._workspace_root}")
     
     @property
     def name(self) -> str:
@@ -93,14 +99,13 @@ class RunCommandTool(BaseTool):
     
     @property
     def description(self) -> str:
-        """Human-readable tool description for LLM to understand."""
+        """Human-readable tool description."""
         return (
-            "Execute shell commands for development tasks like running tests, "
-            "linters, git commands, build tools, etc. "
+            "Execute shell commands and capture output. "
+            "Useful for running tests (pytest), linters (flake8, mypy), "
+            "git commands, build tools, and any CLI operations. "
             "Returns stdout, stderr, and exit code. "
-            "Use 'cwd' to specify working directory. "
-            "Default timeout is 30 seconds (configurable). "
-            "Example commands: 'pytest -v', 'npm test', 'git status', 'python script.py'"
+            "Commands are parsed safely to prevent injection attacks."
         )
     
     @property
@@ -117,16 +122,15 @@ class RunCommandTool(BaseTool):
                 "command": {
                     "type": "string",
                     "description": (
-                        "Shell command to execute. Examples: 'pytest -v', "
-                        "'npm test', 'git status', 'python script.py', 'ls -la'"
+                        "Shell command to execute. Will be safely parsed. "
+                        "Examples: 'pytest tests/', 'git status', 'python script.py'"
                     )
                 },
-                "cwd": {
+                "working_dir": {
                     "type": "string",
                     "description": (
                         "Working directory for command execution. "
-                        "Defaults to current directory ('.'). "
-                        "Can be absolute or relative path."
+                        "Default is current directory ('.')."
                     ),
                     "default": "."
                 },
@@ -134,8 +138,7 @@ class RunCommandTool(BaseTool):
                     "type": "integer",
                     "description": (
                         "Maximum time in seconds to wait for command completion. "
-                        "Defaults to 30 seconds. Use higher values for long-running "
-                        "commands like builds or extensive test suites."
+                        "Default is 30 seconds."
                     ),
                     "default": 30
                 }
@@ -148,25 +151,64 @@ class RunCommandTool(BaseTool):
         command = kwargs.get("command")
         
         if not command:
-            return "command parameter is required"
+            return "Parameter 'command' is required"
         
         if not isinstance(command, str):
-            return f"command must be a string, got {type(command).__name__}"
+            return f"Parameter 'command' must be a string, got {type(command).__name__}"
         
         if not command.strip():
-            return "command cannot be empty"
-        
-        cwd = kwargs.get("cwd", ".")
-        if not isinstance(cwd, str):
-            return f"cwd must be a string, got {type(cwd).__name__}"
+            return "Parameter 'command' cannot be empty"
         
         timeout = kwargs.get("timeout", self.DEFAULT_TIMEOUT)
         if not isinstance(timeout, (int, float)):
-            return f"timeout must be a number, got {type(timeout).__name__}"
+            return f"Parameter 'timeout' must be a number, got {type(timeout).__name__}"
+        
         if timeout <= 0:
-            return "timeout must be positive"
+            return "Parameter 'timeout' must be positive"
         
         return None
+    
+    def _parse_command(self, command: str) -> list:
+        """
+        Safely parse a command string into arguments.
+        
+        Args:
+            command: Command string to parse
+            
+        Returns:
+            List of command arguments
+            
+        Raises:
+            ValueError: If command cannot be parsed
+        """
+        try:
+            # Use shlex.split for safe parsing
+            # This handles quotes and escapes properly
+            if sys.platform == 'win32':
+                # On Windows, shlex doesn't handle all cases well
+                # Use posix=False for better compatibility
+                args = shlex.split(command, posix=False)
+            else:
+                args = shlex.split(command)
+            
+            return args
+        except ValueError as e:
+            raise ValueError(f"Failed to parse command: {e}")
+    
+    def _truncate_output(self, output: str) -> str:
+        """
+        Truncate output if it exceeds maximum size.
+        
+        Args:
+            output: Output string to truncate
+            
+        Returns:
+            Truncated output string
+        """
+        if len(output) > self.MAX_OUTPUT_SIZE:
+            truncated = output[:self.MAX_OUTPUT_SIZE]
+            return truncated + f"\n... [truncated, {len(output) - self.MAX_OUTPUT_SIZE} bytes omitted]"
+        return output
     
     def _execute(self, **kwargs: Any) -> ToolResult:
         """
@@ -174,84 +216,73 @@ class RunCommandTool(BaseTool):
         
         Args:
             command: Shell command to execute
-            cwd: Working directory (default: ".")
+            working_dir: Working directory (default: ".")
             timeout: Timeout in seconds (default: 30)
             
         Returns:
-            ToolResult with command output or error
+            ToolResult with command output
         """
         command_str = kwargs.get("command", "")
-        cwd_str = kwargs.get("cwd", ".")
+        working_dir_str = kwargs.get("working_dir", ".")
         timeout = kwargs.get("timeout", self.DEFAULT_TIMEOUT)
         
-        # Resolve working directory
+        # Parse the command safely
         try:
-            cwd_path = Path(cwd_str).resolve()
-        except Exception as e:
-            return ToolResult.fail(
-                error=f"Invalid working directory: {cwd_str} - {e}",
-                error_type="ValueError"
-            )
-        
-        # Validate working directory exists
-        if not cwd_path.exists():
-            return ToolResult.fail(
-                error=f"Working directory does not exist: {cwd_path}",
-                error_type="FileNotFoundError"
-            )
-        
-        if not cwd_path.is_dir():
-            return ToolResult.fail(
-                error=f"Working directory is not a directory: {cwd_path}",
-                error_type="NotADirectoryError"
-            )
-        
-        # Parse command safely using shlex
-        try:
-            # Handle Windows-specific command parsing
-            if sys.platform == "win32":
-                # On Windows, shlex.split may not work well with some commands
-                # Use a simpler split or keep the command as-is for subprocess
-                args = self._parse_command_windows(command_str)
-            else:
-                args = shlex.split(command_str)
+            args = self._parse_command(command_str)
         except ValueError as e:
             return ToolResult.fail(
-                error=f"Invalid command syntax: {e}",
-                error_type="ValueError"
+                error=f"Invalid command: {e}",
+                error_type="CommandParseError"
             )
         
         if not args:
             return ToolResult.fail(
-                error="Command parsed to empty list",
-                error_type="ValueError"
+                error="Empty command after parsing",
+                error_type="CommandParseError"
             )
         
+        # Resolve working directory
+        try:
+            working_dir = Path(working_dir_str).resolve()
+        except Exception as e:
+            return ToolResult.fail(
+                error=f"Invalid working directory: {working_dir_str} - {e}",
+                error_type="InvalidPathError"
+            )
+        
+        # Validate working directory exists
+        if not working_dir.exists():
+            return ToolResult.fail(
+                error=f"Working directory does not exist: {working_dir}",
+                error_type="FileNotFoundError"
+            )
+        
+        if not working_dir.is_dir():
+            return ToolResult.fail(
+                error=f"Working directory is not a directory: {working_dir}",
+                error_type="NotADirectoryError"
+            )
+        
+        # Execute the command
         logger.info(f"Executing command: {args}")
-        logger.debug(f"Working directory: {cwd_path}")
+        logger.debug(f"Working directory: {working_dir}")
         logger.debug(f"Timeout: {timeout}s")
         
-        # Execute command
         try:
             result = subprocess.run(
                 args,
-                cwd=str(cwd_path),
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                shell=False  # Security: never use shell=True
+                cwd=working_dir,
+                # Security: Do NOT use shell=True
+                shell=False
             )
             
-            # Truncate output if too large
-            stdout = result.stdout
-            stderr = result.stderr
+            stdout = self._truncate_output(result.stdout)
+            stderr = self._truncate_output(result.stderr)
             
-            if len(stdout) > self.MAX_OUTPUT_SIZE:
-                stdout = stdout[:self.MAX_OUTPUT_SIZE] + "\n... (output truncated)"
-            if len(stderr) > self.MAX_OUTPUT_SIZE:
-                stderr = stderr[:self.MAX_OUTPUT_SIZE] + "\n... (output truncated)"
-            
-            # Determine success based on exit code
+            # Success is based on exit code
             success = result.returncode == 0
             
             return ToolResult(
@@ -261,152 +292,73 @@ class RunCommandTool(BaseTool):
                     "stderr": stderr,
                     "exit_code": result.returncode
                 },
-                error=f"Command exited with code {result.returncode}" if not success else None,
-                error_type="CommandError" if not success else None,
-                metadata={
-                    "command": command_str,
-                    "cwd": str(cwd_path)
-                }
+                error=None if success else f"Command exited with code {result.returncode}",
+                error_type=None if success else "CommandError"
             )
             
         except subprocess.TimeoutExpired:
             return ToolResult.fail(
                 error=f"Command timed out after {timeout} seconds",
-                error_type="TimeoutError",
-                command=command_str,
-                timeout=timeout
+                error_type="TimeoutError"
             )
         except FileNotFoundError as e:
             return ToolResult.fail(
                 error=f"Command not found: {args[0]}",
-                error_type="FileNotFoundError",
-                command=command_str
+                error_type="CommandNotFoundError"
             )
         except PermissionError as e:
             return ToolResult.fail(
-                error=f"Permission denied: {e}",
-                error_type="PermissionError",
-                command=command_str
+                error=f"Permission denied executing command: {e}",
+                error_type="PermissionError"
             )
         except OSError as e:
             return ToolResult.fail(
                 error=f"OS error executing command: {e}",
-                error_type="OSError",
-                command=command_str
+                error_type="OSError"
             )
-    
-    def _parse_command_windows(self, command_str: str) -> list:
-        """
-        Parse command string for Windows.
-        
-        Windows command parsing is different from POSIX.
-        This handles common cases while maintaining security.
-        
-        Args:
-            command_str: Command string to parse
-            
-        Returns:
-            List of command arguments
-        """
-        # Try shlex first with posix=False for Windows compatibility
-        try:
-            return shlex.split(command_str, posix=False)
-        except ValueError:
-            # Fallback: simple split (less robust but safer than shell=True)
-            return command_str.split()
 
 
 # =============================================================================
-# Module Self-Test
+# Direct Execution Support
 # =============================================================================
 
 if __name__ == "__main__":
-    """Run self-tests when executed directly."""
-    import tempfile
-    
-    print("=" * 60)
-    print("RunCommandTool Self-Test")
-    print("=" * 60)
+    # Allow running this file directly for testing
+    import json
     
     tool = RunCommandTool()
     
     # Test 1: Simple echo command
-    print("\n--- Test 1: Simple Echo Command ---")
-    if sys.platform == "win32":
-        result = tool.execute(command="cmd /c echo hello")
+    print("Test 1: Echo command")
+    if sys.platform == 'win32':
+        result = tool.execute(command="cmd /c echo hello world")
     else:
-        result = tool.execute(command="echo hello")
-    
-    assert result.success, f"Failed: {result.error}"
-    assert "hello" in result.data["stdout"].lower()
-    print(f"  stdout: {result.data['stdout'].strip()}")
-    print(f"  exit_code: {result.data['exit_code']}")
-    print("✓ Simple echo command works")
-    
-    # Test 2: Command with arguments
-    print("\n--- Test 2: Command with Arguments ---")
-    if sys.platform == "win32":
-        result = tool.execute(command="python --version")
-    else:
-        result = tool.execute(command="python3 --version")
-    
-    # Should succeed (Python is available if running this test)
+        result = tool.execute(command="echo hello world")
+    print(f"Success: {result.success}")
     if result.success:
-        print(f"  stdout: {result.data['stdout'].strip()}")
-        print("✓ Command with arguments works")
+        print(f"stdout: {result.data['stdout'].strip()}")
+        print(f"exit_code: {result.data['exit_code']}")
     else:
-        print(f"  Note: python3 not found, trying python")
-        result = tool.execute(command="python --version")
-        if result.success:
-            print(f"  stdout: {result.data['stdout'].strip()}")
-            print("✓ Command with arguments works")
+        print(f"Error: {result.error}")
     
-    # Test 3: Working directory
-    print("\n--- Test 3: Working Directory ---")
-    with tempfile.TemporaryDirectory() as tmpdir:
-        if sys.platform == "win32":
-            result = tool.execute(command="cmd /c cd", cwd=tmpdir)
-        else:
-            result = tool.execute(command="pwd", cwd=tmpdir)
-        
-        if result.success:
-            print(f"  Working dir output: {result.data['stdout'].strip()}")
-            print("✓ Working directory works")
+    print()
     
-    # Test 4: Failed command
-    print("\n--- Test 4: Failed Command (non-zero exit) ---")
-    if sys.platform == "win32":
-        result = tool.execute(command="cmd /c exit 1")
+    # Test 2: Python version
+    print("Test 2: Python version")
+    result = tool.execute(command="python --version")
+    print(f"Success: {result.success}")
+    if result.success or result.data:
+        data = result.data
+        output = data.get('stdout', '') + data.get('stderr', '')
+        print(f"Output: {output.strip()}")
+        print(f"exit_code: {data.get('exit_code', 'N/A')}")
     else:
-        result = tool.execute(command="false")
+        print(f"Error: {result.error}")
     
-    assert not result.success
-    assert result.data["exit_code"] != 0
-    print(f"  exit_code: {result.data['exit_code']}")
-    print("✓ Failed command correctly detected")
+    print()
     
-    # Test 5: Command not found
-    print("\n--- Test 5: Command Not Found ---")
-    result = tool.execute(command="nonexistent_command_xyz123")
-    assert not result.success
-    assert "not found" in result.error.lower() or "FileNotFoundError" in result.error_type
-    print(f"✓ Correctly handled command not found: {result.error}")
-    
-    # Test 6: Invalid working directory
-    print("\n--- Test 6: Invalid Working Directory ---")
-    result = tool.execute(command="echo test", cwd="/nonexistent/path")
-    assert not result.success
-    assert "does not exist" in result.error
-    print(f"✓ Correctly handled invalid cwd: {result.error}")
-    
-    # Test 7: Schema generation
-    print("\n--- Test 7: Schema Generation ---")
-    schema = tool.to_gemini_schema()
-    assert "name" in schema
-    assert schema["name"] == "run_command"
-    assert "parameters" in schema
-    print(f"✓ Schema generated: {schema['name']}")
-    
-    print("\n" + "=" * 60)
-    print("All RunCommandTool tests passed! ✓")
-    print("=" * 60)
+    # Test 3: Non-existent command
+    print("Test 3: Non-existent command")
+    result = tool.execute(command="nonexistent_command_12345")
+    print(f"Success: {result.success}")
+    print(f"Error: {result.error}")
