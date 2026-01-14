@@ -114,7 +114,7 @@ class GeminiClient:
         self.retry_delay = retry_delay
         
         # Configure API
-        api_key = settings.GEMINI_API_KEY if not config else getattr(config, 'GEMINI_API_KEY', settings.GEMINI_API_KEY)
+        api_key = settings.gemini_api_key if not config else getattr(config, 'gemini_api_key', settings.gemini_api_key)
         generativeai.configure(api_key=api_key)
 
         # Safety Settings - permissive for coding use cases
@@ -135,54 +135,68 @@ class GeminiClient:
         self.total_requests = 0
         self.total_tokens = 0
         logger.info(f"GeminiClient initialized with model: {self.model_name}")
-    async def generate_text(self, prompt: str, max_tokens: int = 1024) -> LLMResponse:
-        """Generate text using the Gemini API asynchronously."""
+    async def generate_text(self, prompt: str, system_instruction: Optional[str] = None, max_tokens: int = 1024) -> LLMResponse:
+        """Generate text using the Gemini API asynchronously.
+        
+        Args:
+            prompt: The user's prompt
+            system_instruction: Optional system instruction to guide the model
+            max_tokens: Maximum tokens to generate
+            
+        Returns:
+            LLMResponse with generated text
+        """
         logger.debug(f"Generating text for prompt: {prompt[:99]}...")
         
-        #Build generation config
-        generation_config = types.TextGenerationConfig(
-            temperature=self.temperature,
-            max_output_tokens=max_tokens,
-        )
+        #Build generation config - use dict for compatibility
+        generation_config = {
+            "temperature": self.temperature,
+            "max_output_tokens": max_tokens,
+        }
         
         for attempt in range(self.max_retries):
             try:
-                full_prompt = f"{prompt}"
+                # Combine system instruction with prompt if provided
                 if system_instruction:
-                    response = await asyncio.to_thread(
-                        self.model.generate_text,
-                        prompt=full_prompt,
-                        generation_config=generation_config
-                    )
-                    #Process response
-                    try:
-                        text = response.text
-                    except ValueError as e:
-                        logger.error(f"Response parsing error: {e}")
-                        text = "Response was blocked or could not be parsed."
+                    full_prompt = f"{system_instruction}\n\n{prompt}"
+                else:
+                    full_prompt = prompt
                     
-                    usage_metadata = UsageMetadata(
-                        prompt_tokens=response.metadata.input_token_count,
-                        completion_tokens=response.metadata.output_token_count,
-                        total_tokens=response.metadata.total_token_count
-                    )
-                    
-                    # track usage
-                    self.total_requests += 1
-                    self.total_tokens += usage_metadata.total_tokens
-                    
-                    # extract finish reason
-                    finish_reason = None
-                    if response.candidates:
-                        finish_reason = response.candidates[0].finish_reason.name
-                    
-                    logger.info(f"Response generated: {usage_metadata}")
-                    return LLMResponse(
-                        text=text,
-                        model=self.model_name,
-                        usage=usage_metadata,
-                        finish_reason=finish_reason
-                    )
+                response = await asyncio.to_thread(
+                    self.model.generate_content,
+                    full_prompt,
+                    generation_config=generation_config
+                )
+                #Process response
+                try:
+                    text = response.text
+                except ValueError as e:
+                    logger.error(f"Response parsing error: {e}")
+                    text = "Response was blocked or could not be parsed."
+                
+                # Extract usage metadata
+                usage_metadata = UsageMetadata(
+                    prompt_tokens=getattr(response.usage_metadata, 'prompt_token_count', 0),
+                    completion_tokens=getattr(response.usage_metadata, 'candidates_token_count', 0),
+                    total_tokens=getattr(response.usage_metadata, 'total_token_count', 0)
+                )
+                
+                # track usage
+                self.total_requests += 1
+                self.total_tokens += usage_metadata.total_tokens
+                
+                # extract finish reason
+                finish_reason = None
+                if response.candidates:
+                    finish_reason = response.candidates[0].finish_reason.name
+                
+                logger.info(f"Response generated: {usage_metadata}")
+                return LLMResponse(
+                    text=text,
+                    model=self.model_name,
+                    usage=usage_metadata,
+                    finish_reason=finish_reason
+                )
             except google_exceptions.ResourceExhausted as e:
                 # Rate limit hit!
                 logger.warning(f"Rate limit hit (attempt {attempt + 1}/{self.max_retries}): {e}")
