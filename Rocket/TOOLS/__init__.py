@@ -18,6 +18,15 @@ from Rocket.TOOLS.write_file import (
     WriteFileTool,
     WriteConflictError,
 )
+from Rocket.TOOLS.list_directory import (
+    ListDirectoryTool,
+)
+from Rocket.TOOLS.search_files import (
+    SearchFilesTool,
+)
+from Rocket.TOOLS.run_command import (
+    RunCommandTool,
+)
 from Rocket.TOOLS.registry import (
     ToolRegistry,
     ToolRegistryError,
@@ -37,6 +46,9 @@ __all__ = [
     # Tools
     "ReadFileTool",
     "WriteFileTool",
+    "ListDirectoryTool",
+    "SearchFilesTool",
+    "RunCommandTool",
     # Registry
     "ToolRegistry",
     "ToolRegistryError",

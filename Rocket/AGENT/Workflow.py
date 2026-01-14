@@ -504,9 +504,15 @@ class WorkflowOrchestrator:
         try:
             from Rocket.TOOLS.read_file import ReadFileTool
             from Rocket.TOOLS.write_file import WriteFileTool
+            from Rocket.TOOLS.list_directory import ListDirectoryTool
+            from Rocket.TOOLS.search_files import SearchFilesTool
+            from Rocket.TOOLS.run_command import RunCommandTool
             
             registry.register(ReadFileTool(workspace_root=self.workspace_root))
             registry.register(WriteFileTool(workspace_root=self.workspace_root))
+            registry.register(ListDirectoryTool())
+            registry.register(SearchFilesTool())
+            registry.register(RunCommandTool())
             
             logger.debug(f"Registered {registry.count()} default tools")
             
