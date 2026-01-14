@@ -5,7 +5,7 @@ from Rocket.GIT.Pr_creator import PRCreator, PRInfo, PRCreationError
 
 __all__ = [
     "GitManager",
-    "GitStatus", 
+    "GitStatus",
     "GitError",
     "PRCreator",
     "PRInfo",

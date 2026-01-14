@@ -175,22 +175,25 @@ class ToolExecutor:
     
     def get_available_tools(self) -> List[BaseTool]:
         """
-        Get list of tools available in current mode.
+        Get tools available in the current mode.
         
         Returns:
-            List of allowed tool instances
+            List of tools allowed by the current mode
         """
-        return [
-            tool for tool in self._registry.list_all()
-            if self.is_tool_allowed(tool.name)
-        ]
+        available = []
+        for tool in self._registry.list_all():
+            if self.is_tool_allowed(tool.name):
+                available.append(tool)
+        
+        logger.debug(f"Available tools for {self.mode_name}: {len(available)}")
+        return available
     
     def get_available_tool_names(self) -> List[str]:
         """
-        Get names of tools available in current mode.
+        Get names of tools available in the current mode.
         
         Returns:
-            List of allowed tool names
+            List of tool names allowed by current mode
         """
         return [tool.name for tool in self.get_available_tools()]
     
@@ -224,23 +227,27 @@ class ToolExecutor:
         
         Args:
             format: Schema format ("openai" or "gemini")
-            legacy: Use legacy format for OpenAI
+            legacy: Use legacy OpenAI format
             
         Returns:
-            List of tool schemas
+            List of tool schemas for LLM function calling
         """
         available_tools = self.get_available_tools()
         schemas = []
         
         for tool in available_tools:
             if format.lower() == "openai":
-                schemas.append(tool.to_openai_schema(legacy=legacy))
+                schema = tool.to_openai_schema(legacy=legacy)
             elif format.lower() == "gemini":
-                schemas.append(tool.to_gemini_schema())
+                schema = tool.to_gemini_schema()
             else:
                 raise ValueError(f"Unknown schema format: {format}")
+            schemas.append(schema)
         
-        logger.debug(f"Generated {len(schemas)} schemas (format={format})")
+        logger.debug(
+            f"Generated {len(schemas)} schemas for {self.mode_name} "
+            f"(format={format})"
+        )
         return schemas
     
     # -------------------------------------------------------------------------
@@ -337,24 +344,29 @@ class ToolExecutor:
     ) -> None:
         """Track file operations in context based on tool execution."""
         if not result.success:
-            return
+            return  # Don't track failed operations
         
-        path = parameters.get("path", "")
+        # Get file path from parameters or result
+        path = parameters.get("path") or result.data.get("path") if result.data else None
+        
         if not path:
             return
         
-        # Track based on tool name
-        if tool_name == "read_file":
-            self._context.track_file_read(path)
-        elif tool_name == "write_file":
-            mode = parameters.get("mode", "")
-            if mode == "create":
-                self._context.track_file_created(path)
+        # Determine operation type from tool name or category
+        tool = self._registry.get(tool_name)
+        
+        if tool is None:
+            return
+        
+        if tool.category == ToolCategory.READ:
+            self._context.add_file_read(path)
+        elif tool.category == ToolCategory.WRITE:
+            # Check if it's a new file or modification
+            was_created = result.data.get("created", False) if result.data else False
+            if was_created:
+                self._context.add_file_created(path)
             else:
-                self._context.track_file_modified(path)
-        elif tool_name == "list_directory":
-            # Directory listing is a read operation
-            self._context.track_file_read(path)
+                self._context.add_file_modified(path)
     
     # -------------------------------------------------------------------------
     # Batch Execution
@@ -397,7 +409,6 @@ class ToolExecutor:
                     
             except ToolNotAllowedError as e:
                 # Permission errors stop execution
-                logger.warning(f"Permission denied: {e}")
                 results.append(ToolResult.fail(str(e), error_type="PermissionDenied"))
                 if stop_on_error:
                     break
@@ -409,31 +420,34 @@ class ToolExecutor:
     # -------------------------------------------------------------------------
     
     def get_summary(self) -> Dict[str, Any]:
-        """Get summary of executor state."""
+        """
+        Get executor summary.
+        
+        Returns:
+            Dictionary with executor state
+        """
+        available = self.get_available_tool_names()
+        all_tools = self._registry.list_names()
+        
         return {
             "mode": self.mode_name,
-            "available_tools": self.get_available_tool_names(),
-            "total_tools_in_registry": len(self._registry),
-            "tool_executions": self._context.total_tool_calls,
-            "successful_executions": self._context.successful_tool_calls,
-            "failed_executions": self._context.failed_tool_calls,
+            "available_tools": available,
+            "blocked_tools": [t for t in all_tools if t not in available],
+            "total_registered": len(all_tools),
+            "total_available": len(available),
         }
     
     def __str__(self) -> str:
         """String representation."""
-        return (
-            f"ToolExecutor("
-            f"mode={self.mode_name}, "
-            f"tools={len(self.get_available_tools())}"
-            f")"
-        )
+        available = len(self.get_available_tools())
+        return f"ToolExecutor(mode={self.mode_name}, available_tools={available})"
     
     def __repr__(self) -> str:
         """Developer representation."""
         return (
             f"<ToolExecutor("
             f"mode='{self.mode_name}', "
-            f"tools={self.get_available_tool_names()})>"
+            f"tools={len(self._registry)})>"
         )
 
 
@@ -456,22 +470,30 @@ if __name__ == "__main__":
     @dataclass
     class MockModeConfig:
         name: str = "TEST"
-        tools_allowed: List[str] = field(default_factory=list)
+        description: str = "Test mode"
+        temperature: float = 0.5
+        max_tokens: int = 1000
+        tools_allowed: List[str] = field(default_factory=lambda: ["read_file"])
+        requires_git_branch: bool = False
+        system_prompt: str = "You are a test assistant."
+        icon: str = "🧪"
     
     class MockMode:
-        def __init__(self, tools_allowed: List[str]):
-            self._config = MockModeConfig(tools_allowed=tools_allowed)
+        def __init__(self, tools_allowed=None):
+            self._config = MockModeConfig()
+            if tools_allowed:
+                self._config.tools_allowed = tools_allowed
         
         @property
         def config(self):
             return self._config
         
-        def is_tool_allowed(self, tool_name: str) -> bool:
+        def is_tool_allowed(self, tool_name):
             if "ALL" in self._config.tools_allowed:
                 return True
             return tool_name in self._config.tools_allowed
         
-        def get_allowed_tools(self) -> List[str]:
+        def get_allowed_tools(self):
             return self._config.tools_allowed.copy()
     
     # Setup test environment
@@ -506,6 +528,7 @@ if __name__ == "__main__":
         
         assert result.success
         print(f"✓ read_file executed successfully")
+        # result.data is the file content or a dict depending on tool
         content = result.data if isinstance(result.data, str) else result.data.get('content', '')
         print(f"  Content preview: {content[:50]}...")
         
@@ -528,30 +551,62 @@ if __name__ == "__main__":
         assert "not found" in result.error.lower()
         print(f"✓ Correctly returned error: {result.error}")
         
-        # Test 5: Get tool schemas
-        print("\n--- Test 5: Get Tool Schemas ---")
-        schemas = executor_all.get_tool_schemas(format="gemini")
-        print(f"✓ Generated {len(schemas)} Gemini schemas")
-        for schema in schemas:
-            print(f"  - {schema['name']}")
+        # Test 5: Context tracking
+        print("\n--- Test 5: Context Tracking ---")
+        assert context.total_tool_executions >= 2
+        print(f"✓ Tool executions tracked: {context.total_tool_executions}")
+        print(f"  Successful: {context.successful_tool_executions}")
+        print(f"  Failed: {context.failed_tool_executions}")
         
-        # Test 6: Batch execution
-        print("\n--- Test 6: Batch Execution ---")
+        # Test 6: File tracking
+        print("\n--- Test 6: File Tracking ---")
+        assert "test.py" in context.files_read
+        print(f"✓ Files read tracked: {context.files_read}")
+        
+        # Test 7: Get tool schemas
+        print("\n--- Test 7: Get Tool Schemas ---")
+        schemas = executor.get_tool_schemas(format="openai")
+        
+        assert len(schemas) == 1  # Only read_file allowed
+        assert schemas[0]["name"] == "read_file"
+        print(f"✓ Generated {len(schemas)} schemas (only allowed tools)")
+        
+        # Test 8: ALL tools allowed mode
+        print("\n--- Test 8: ALL Tools Mode ---")
+        mode_all = MockMode(tools_allowed=["ALL"])
+        executor_all = ToolExecutor(mode=mode_all, context=context, registry=registry)
+        
+        available = executor_all.get_available_tool_names()
+        assert "read_file" in available
+        assert "write_file" in available
+        print(f"✓ ALL mode has access to: {available}")
+        
+        # Test 9: Batch execution
+        print("\n--- Test 9: Batch Execution ---")
+        context2 = ExecutionContext(user_prompt="Batch test", mode_name="TEST")
+        executor2 = ToolExecutor(mode=mode_all, context=context2, registry=registry)
+        
         calls = [
             {"name": "read_file", "parameters": {"path": "test.py"}},
-            {"name": "read_file", "parameters": {"path": "nonexistent.py"}},
+            {"name": "write_file", "parameters": {"path": "new.txt", "mode": "full", "content": "new content"}},
         ]
-        results = executor_all.execute_many(calls)
-        print(f"✓ Batch executed {len(results)} tools")
-        for i, r in enumerate(results):
-            status = "✓" if r.success else "✗"
-            print(f"  {status} Call {i+1}: {r.success}")
         
-        # Test 7: Context tracking
-        print("\n--- Test 7: Context Tracking ---")
-        print(f"✓ Total tool calls: {context.total_tool_calls}")
-        print(f"✓ Files read: {context.files_read}")
+        results = executor2.execute_many(calls)
         
-        print("\n" + "=" * 60)
-        print("All tests passed! ✓")
-        print("=" * 60)
+        assert len(results) == 2
+        assert results[0].success
+        assert results[1].success
+        print(f"✓ Batch execution: {len(results)} results")
+        
+        # Test 10: Executor summary
+        print("\n--- Test 10: Executor Summary ---")
+        summary = executor.get_summary()
+        
+        print(f"✓ Summary:")
+        print(f"  Mode: {summary['mode']}")
+        print(f"  Available: {summary['available_tools']}")
+        print(f"  Blocked: {summary['blocked_tools']}")
+    
+    print("\n" + "=" * 60)
+    print("All tests passed! ✓")
+    print("=" * 60)
