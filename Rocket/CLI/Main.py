@@ -238,17 +238,19 @@ def version():
 
 @app.command("config")
 def config(
-    action: str = typer.Argument("show", help="Action: show, set, reset"),
-    key: Optional[str] = typer.Option(None, "--key", "-k", help="Config key"),
+    action: str = typer.Argument("show", help="Action: show, set, list, reset"),
+    key: Optional[str] = typer.Option(None, "--key", "-k", help="Config key (e.g., gemini-key, temperature)"),
     value: Optional[str] = typer.Option(None, "--value", "-v", help="Config value")
 ):
     """
     Manage Rocket CLI configuration.
     
     Examples:
-        rocket config show
-        rocket config set --key api_key --value your_key_here
-        rocket config reset
+        rocket config show                              # Show current config
+        rocket config list                              # List all config keys
+        rocket config set -k gemini-key -v YOUR_KEY    # Set Gemini API key
+        rocket config set -k temperature -v 0.9        # Set temperature
+        rocket config reset                             # Reset to defaults
     """
     try:
         from Rocket.CLI.commands import handle_config
@@ -264,6 +266,29 @@ def config(
     except Exception as e:
         console.print(f"[red]❌ Error in config command: {str(e)}[/red]")
         logger.exception("Config command failed")
+        raise typer.Exit(1)
+
+
+@app.command("status")
+def status():
+    """
+    Show provider status and rate limits.
+    
+    Displays all available LLM providers, their status,
+    and current rate limit information.
+    
+    Examples:
+        rocket status
+    """
+    try:
+        from Rocket.CLI.commands import handle_status
+        
+        logger.info("📊 Status command")
+        asyncio.run(handle_status())
+        
+    except Exception as e:
+        console.print(f"[red]❌ Error in status command: {str(e)}[/red]")
+        logger.exception("Status command failed")
         raise typer.Exit(1)
 
 
