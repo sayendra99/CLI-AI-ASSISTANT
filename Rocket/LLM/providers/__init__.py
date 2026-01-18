@@ -42,6 +42,7 @@ from .gemini import GeminiProvider
 from .community_proxy import CommunityProxyProvider
 from .ollama import OllamaProvider
 from .manager import ProviderManager, ManagerConfig, get_manager, reset_manager
+from .auth import AuthManager, AuthSession, AuthError, get_auth_manager
 from .config import (
     RocketConfig,
     load_config,
@@ -75,6 +76,11 @@ __all__ = [
     "ManagerConfig",
     "get_manager",
     "reset_manager",
+    # Auth
+    "AuthManager",
+    "AuthSession",
+    "AuthError",
+    "get_auth_manager",
     # Config
     "RocketConfig",
     "load_config",

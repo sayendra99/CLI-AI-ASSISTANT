@@ -23,6 +23,7 @@ from Rocket.LLM.providers import (
     ProviderError,
     ConfigError,
 )
+from Rocket.LLM.providers.auth import get_auth_manager, AuthError
 from Rocket.Utils.Config import settings
 
 logger = logging.getLogger(__name__)
@@ -727,4 +728,133 @@ async def handle_status() -> None:
     except Exception as e:
         console.print(f"[red]Error checking status: {str(e)}[/red]")
         logger.exception("Error in handle_status")
+        raise
+
+
+async def handle_login(no_browser: bool = False) -> None:
+    """
+    Handle login command - authenticate with GitHub.
+    
+    Uses GitHub device flow for authentication, which works well
+    for CLI applications.
+    
+    Args:
+        no_browser: If True, don't automatically open the browser
+    """
+    try:
+        auth = get_auth_manager()
+        
+        # Check if already logged in
+        session = await auth.get_current_session()
+        if session:
+            console.print(f"\n[green]✅ Already logged in as [bold]{session.username}[/bold][/green]")
+            console.print("Use [cyan]rocket logout[/cyan] to sign out first.")
+            return
+        
+        # Start device flow login
+        console.print("\n[cyan]🔐 Logging in with GitHub...[/cyan]")
+        
+        session = await auth.login_device_flow(open_browser=not no_browser)
+        
+        console.print(f"[green]✅ Successfully logged in as [bold]{session.username}[/bold]![/green]")
+        
+        if session.name:
+            console.print(f"   Welcome, {session.name}!")
+        
+        console.print()
+        console.print("[dim]You now have access to 25 requests/day (5x more than anonymous).[/dim]")
+        console.print()
+        
+        logger.info(f"User logged in: {session.username}")
+        
+    except AuthError as e:
+        console.print(f"\n[red]❌ Login failed: {str(e)}[/red]")
+        logger.error(f"Login failed: {e}")
+    except Exception as e:
+        console.print(f"\n[red]❌ Error during login: {str(e)}[/red]")
+        logger.exception("Error in handle_login")
+        raise
+
+
+async def handle_logout() -> None:
+    """
+    Handle logout command - sign out and clear stored credentials.
+    """
+    try:
+        auth = get_auth_manager()
+        
+        # Check if logged in
+        session_data = auth.get_stored_session()
+        if not session_data:
+            console.print("\n[yellow]Not currently logged in.[/yellow]")
+            return
+        
+        username = session_data.get('username', 'Unknown')
+        
+        console.print(f"\n[cyan]Logging out {username}...[/cyan]")
+        
+        success = await auth.logout()
+        
+        if success:
+            console.print(f"[green]✅ Successfully logged out.[/green]")
+            console.print("[dim]You can log in again with [cyan]rocket login[/cyan][/dim]")
+        else:
+            console.print("[yellow]⚠️ Session cleared locally, but server logout may have failed.[/yellow]")
+        
+        logger.info(f"User logged out: {username}")
+        
+    except Exception as e:
+        console.print(f"\n[red]❌ Error during logout: {str(e)}[/red]")
+        logger.exception("Error in handle_logout")
+        raise
+
+
+async def handle_whoami() -> None:
+    """
+    Handle whoami command - show current user info.
+    """
+    try:
+        auth = get_auth_manager()
+        
+        # Get and validate current session
+        session = await auth.get_current_session()
+        
+        if not session:
+            console.print("\n[yellow]Not logged in.[/yellow]")
+            console.print("Use [cyan]rocket login[/cyan] to authenticate with GitHub.")
+            console.print()
+            console.print("[dim]Anonymous users get 5 requests/day.[/dim]")
+            console.print("[dim]Authenticated users get 25 requests/day.[/dim]")
+            return
+        
+        console.print("\n[cyan]🚀 Current User[/cyan]\n")
+        
+        # Create user info table
+        table = Table(show_header=False, box=None, padding=(0, 2))
+        table.add_column("Field", style="bold")
+        table.add_column("Value")
+        
+        table.add_row("Username", f"[green]{session.username}[/green]")
+        
+        if session.name:
+            table.add_row("Name", session.name)
+        
+        table.add_row("User ID", session.user_id)
+        
+        if session.created_at:
+            table.add_row("Logged in", session.created_at)
+        
+        if session.expires_at:
+            table.add_row("Session expires", session.expires_at)
+        
+        console.print(table)
+        console.print()
+        console.print("[dim]Authenticated tier: 25 requests/day[/dim]")
+        console.print()
+        
+        logger.info(f"Whoami: {session.username}")
+        
+    except Exception as e:
+        console.print(f"\n[red]❌ Error: {str(e)}[/red]")
+        logger.exception("Error in handle_whoami")
         raise
