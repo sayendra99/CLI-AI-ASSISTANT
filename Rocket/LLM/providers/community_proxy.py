@@ -23,6 +23,7 @@ from .base import (
     ConfigError,
     ProviderUnavailableError,
 )
+from .auth import get_auth_manager
 
 logger = get_logger(__name__)
 
@@ -61,6 +62,7 @@ class CommunityProxyProvider(LLMProvider):
         github_token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 60.0,
+        auto_auth: bool = True,
     ):
         """Initialize the community proxy provider.
         
@@ -68,7 +70,12 @@ class CommunityProxyProvider(LLMProvider):
             github_token: GitHub OAuth token for authenticated tier
             base_url: Override proxy URL (for dev/testing)
             timeout: Request timeout in seconds
+            auto_auth: Automatically load auth from storage if not provided
         """
+        # Try to load auth from storage if not explicitly provided
+        if github_token is None and auto_auth:
+            github_token = self._load_stored_auth()
+        
         self.github_token = github_token
         self.base_url = base_url or PROXY_BASE_URL
         self.timeout = timeout
@@ -82,6 +89,25 @@ class CommunityProxyProvider(LLMProvider):
         
         # HTTP session will be created lazily
         self._session = None
+        
+        if self.github_token:
+            logger.debug("Community proxy initialized with authentication (25 req/day)")
+        else:
+            logger.debug("Community proxy initialized in anonymous mode (5 req/day)")
+    
+    def _load_stored_auth(self) -> Optional[str]:
+        """Load session token from auth storage if available."""
+        try:
+            auth_manager = get_auth_manager()
+            session_data = auth_manager.get_stored_session()
+            if session_data:
+                token = session_data.get('session_token')
+                if token:
+                    logger.debug(f"Loaded auth for user: {session_data.get('username', 'unknown')}")
+                    return token
+        except Exception as e:
+            logger.debug(f"Could not load stored auth: {e}")
+        return None
     
     async def _get_session(self):
         """Get or create aiohttp session."""

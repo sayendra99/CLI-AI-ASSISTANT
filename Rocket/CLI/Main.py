@@ -292,6 +292,78 @@ def status():
         raise typer.Exit(1)
 
 
+@app.command("login")
+def login(
+    no_browser: bool = typer.Option(False, "--no-browser", help="Don't automatically open browser")
+):
+    """
+    Log in with GitHub to get higher rate limits.
+    
+    Uses GitHub device flow for secure authentication.
+    Authenticated users get 25 requests/day (vs 5 for anonymous).
+    
+    Examples:
+        rocket login
+        rocket login --no-browser  # Manual browser navigation
+    """
+    try:
+        from Rocket.CLI.commands import handle_login
+        
+        logger.info("🔐 Login command")
+        asyncio.run(handle_login(no_browser=no_browser))
+        
+    except Exception as e:
+        console.print(f"[red]❌ Error in login command: {str(e)}[/red]")
+        logger.exception("Login command failed")
+        raise typer.Exit(1)
+
+
+@app.command("logout")
+def logout():
+    """
+    Log out and clear stored credentials.
+    
+    Removes your GitHub authentication from this device.
+    You can log in again anytime with 'rocket login'.
+    
+    Examples:
+        rocket logout
+    """
+    try:
+        from Rocket.CLI.commands import handle_logout
+        
+        logger.info("🚪 Logout command")
+        asyncio.run(handle_logout())
+        
+    except Exception as e:
+        console.print(f"[red]❌ Error in logout command: {str(e)}[/red]")
+        logger.exception("Logout command failed")
+        raise typer.Exit(1)
+
+
+@app.command("whoami")
+def whoami():
+    """
+    Show current logged-in user info.
+    
+    Displays your GitHub username and session details.
+    Shows anonymous status if not logged in.
+    
+    Examples:
+        rocket whoami
+    """
+    try:
+        from Rocket.CLI.commands import handle_whoami
+        
+        logger.info("👤 Whoami command")
+        asyncio.run(handle_whoami())
+        
+    except Exception as e:
+        console.print(f"[red]❌ Error in whoami command: {str(e)}[/red]")
+        logger.exception("Whoami command failed")
+        raise typer.Exit(1)
+
+
 def main():
     """Main entry point for Rocket CLI."""
     try:
