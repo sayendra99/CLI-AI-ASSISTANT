@@ -1,0 +1,23 @@
+# Node modules
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# IDE
+.idea/
+.vscode/
+
+# Build output
+dist/
+*.js.map
+
+# OS
+.DS_Store
+Thumbs.db
