@@ -7,20 +7,59 @@ import logging
 from typing import Optional
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.table import Table
 
 from Rocket.LLM import GeminiClient
+from Rocket.LLM.providers import (
+    ProviderManager,
+    GenerateOptions,
+    GenerateResponse,
+    load_config,
+    save_config,
+    get_config_path,
+    list_config_keys,
+    resolve_config_key,
+    RateLimitError,
+    ProviderError,
+    ConfigError,
+)
 from Rocket.Utils.Config import settings
 
 logger = logging.getLogger(__name__)
 console = Console()
+
+# Global provider manager instance (initialized lazily)
+_provider_manager: Optional[ProviderManager] = None
+
+
+async def get_provider_manager() -> ProviderManager:
+    """
+    Get the provider manager instance, initializing if needed.
+    
+    Uses the new multi-provider system with automatic fallback.
+    
+    Returns:
+        Initialized ProviderManager instance
+    """
+    global _provider_manager
+    
+    if _provider_manager is None:
+        # Load config from ~/.rocket-cli/config.json
+        config = load_config()
+        manager_config = config.to_manager_config()
+        
+        _provider_manager = ProviderManager(config=manager_config)
+        await _provider_manager.initialize()
+    
+    return _provider_manager
 
 
 def get_llm_client() -> GeminiClient:
     """
     Get configured LLM client with settings applied.
     
-    Constructs a new client on each call to respect dynamic configuration changes.
-    This ensures that settings modifications via handle_config take effect immediately.
+    NOTE: This is the legacy client. Use get_provider_manager() for
+    the new multi-provider system with fallback support.
     
     Returns:
         Configured GeminiClient instance with current settings
@@ -37,6 +76,8 @@ async def handle_chat(message: str, stream: bool = False) -> None:
     """
     Handle chat command - general conversation with AI.
     
+    Uses the new multi-provider system with automatic fallback.
+    
     Args:
         message: User's question or request
         stream: Whether to stream the response
@@ -44,8 +85,8 @@ async def handle_chat(message: str, stream: bool = False) -> None:
     try:
         console.print(f"\n[cyan]🚀 Rocket:[/cyan]", end=" ")
         
-        # Get dynamically configured client
-        llm_client = get_llm_client()
+        # Get provider manager (with fallback support)
+        manager = await get_provider_manager()
         
         system_instruction = (
             "You are Rocket, an expert AI coding assistant. "
@@ -54,26 +95,42 @@ async def handle_chat(message: str, stream: bool = False) -> None:
             "When showing code, use proper markdown formatting with language identifiers."
         )
         
+        options = GenerateOptions(
+            prompt=message,
+            system_instruction=system_instruction,
+            temperature=settings.temperature,
+            max_tokens=settings.max_tokens,
+            stream=stream,
+        )
+        
         if stream:
             # Stream response
-            async for chunk in llm_client.generate_stream(
-                prompt=message,
-                system_instruction=system_instruction
-            ):
+            async for chunk in manager.generate_stream(options):
                 console.print(chunk, end="", highlight=False)
             console.print()  # New line at end
         else:
             # Get full response
-            response = await llm_client.generate_text(
-                prompt=message,
-                system_instruction=system_instruction
-            )
+            response = await manager.generate(options)
             console.print(Markdown(response.text))
+            
+            # Show provider used
+            logger.info(f"Response from provider: {response.provider}")
         
-        # Log usage stats
-        stats = llm_client.get_usage_stats()
-        logger.info(f"Usage - Requests: {stats['total_requests']}, Tokens: {stats['total_tokens']}")
+        # Log usage from rate limits if available
+        rate_limits = await manager.get_rate_limits()
+        for provider_name, limit_info in rate_limits.items():
+            if limit_info.remaining < limit_info.limit:
+                logger.info(f"{provider_name}: {limit_info.remaining}/{limit_info.limit} requests remaining")
         
+    except RateLimitError as e:
+        console.print(f"\n[yellow]{e.message}[/yellow]")
+        if e.upgrade_url:
+            console.print(f"[cyan]{e.get_upgrade_message()}[/cyan]")
+        logger.warning(f"Rate limit hit: {e}")
+    except ProviderError as e:
+        console.print(f"[red]Error: {str(e)}[/red]")
+        logger.exception("Error in handle_chat")
+        raise
     except Exception as e:
         console.print(f"[red]Error: {str(e)}[/red]")
         logger.exception("Error in handle_chat")
@@ -88,6 +145,8 @@ async def handle_generate(
 ) -> None:
     """
     Handle generate command - create code from description.
+    
+    Uses the new multi-provider system with automatic fallback.
     
     Args:
         description: What to generate
@@ -108,8 +167,8 @@ async def handle_generate(
         
         console.print(f"\n[cyan]🔧 Generating {language} code...[/cyan]\n")
         
-        # Get dynamically configured client
-        llm_client = get_llm_client()
+        # Get provider manager (with fallback support)
+        manager = await get_provider_manager()
         
         system_instruction = (
             f"You are an expert {language} developer. "
@@ -120,23 +179,26 @@ async def handle_generate(
         
         prompt = f"Generate {language} code for: {description}"
         
+        options = GenerateOptions(
+            prompt=prompt,
+            system_instruction=system_instruction,
+            temperature=settings.temperature,
+            max_tokens=settings.max_tokens,
+            stream=stream,
+        )
+        
         generated_code = ""
         
         if stream:
-            async for chunk in llm_client.generate_stream(
-                prompt=prompt,
-                system_instruction=system_instruction
-            ):
+            async for chunk in manager.generate_stream(options):
                 console.print(chunk, end="", highlight=False)
                 generated_code += chunk
             console.print()
         else:
-            response = await llm_client.generate_text(
-                prompt=prompt,
-                system_instruction=system_instruction
-            )
+            response = await manager.generate(options)
             console.print(Markdown(response.text))
             generated_code = response.text
+            logger.info(f"Response from provider: {response.provider}")
         
         # Save to file if requested
         if output_file:
@@ -155,6 +217,15 @@ async def handle_generate(
     except ValueError as e:
         console.print(f"[red]❌ Validation error: {str(e)}[/red]")
         logger.exception("Validation error in handle_generate")
+        raise
+    except RateLimitError as e:
+        console.print(f"\n[yellow]{e.message}[/yellow]")
+        if e.upgrade_url:
+            console.print(f"[cyan]{e.get_upgrade_message()}[/cyan]")
+        logger.warning(f"Rate limit hit: {e}")
+    except ProviderError as e:
+        console.print(f"[red]❌ Error: {str(e)}[/red]")
+        logger.exception("Error in handle_generate")
         raise
     except Exception as e:
         console.print(f"[red]❌ Error: {str(e)}[/red]")
@@ -439,71 +510,221 @@ def handle_config(
     """
     Handle config command - manage settings.
     
-    Allows viewing and modifying LLM configuration settings.
+    Uses the new persistent config system (~/.rocket-cli/config.json).
+    Supports API keys, provider settings, and preferences.
     
     Args:
-        action: show, set, or reset
-        key: Config key to set
+        action: show, set, list, or reset
+        key: Config key to set (can use aliases like 'gemini-key')
         value: Config value to set
     """
+    global _provider_manager  # Declare at function level
+    
     try:
+        # Load current config
+        config = load_config()
+        
         if action == "show":
             console.print("\n[cyan]⚙️  Rocket Configuration:[/cyan]")
-            console.print(f"  API Key: {'[green]✅ Set[/green]' if settings.gemini_api_key else '[red]❌ Not set[/red]'}")
-            console.print(f"  Model: [cyan]{settings.gemini_model}[/cyan]")
-            console.print(f"  Temperature: [cyan]{settings.temperature}[/cyan]")
-            console.print(f"  Max Retries: [cyan]{settings.max_retries}[/cyan]")
-            console.print(f"  Retry Delay: [cyan]{settings.retry_delay}s[/cyan]")
+            console.print(f"  Config file: [dim]{get_config_path()}[/dim]")
+            console.print()
+            
+            # API Keys section
+            console.print("[bold]API Keys:[/bold]")
+            gemini_status = "[green]✅ Set[/green]" if config.gemini_api_key else "[red]❌ Not set[/red]"
+            console.print(f"  Gemini API Key: {gemini_status}")
+            github_status = "[green]✅ Authenticated[/green]" if config.github_token else "[yellow]⚠️  Not logged in[/yellow]"
+            console.print(f"  GitHub: {github_status}")
+            if config.github_username:
+                console.print(f"    Username: [cyan]{config.github_username}[/cyan]")
+            console.print()
+            
+            # Provider settings
+            console.print("[bold]Provider Settings:[/bold]")
+            console.print(f"  Preferred Provider: [cyan]{config.preferred_provider or 'auto'}[/cyan]")
+            console.print(f"  Prefer Local (Ollama): [cyan]{config.prefer_local}[/cyan]")
+            console.print(f"  Ollama Model: [cyan]{config.ollama_model}[/cyan]")
+            console.print()
+            
+            # Generation defaults
+            console.print("[bold]Generation Defaults:[/bold]")
+            console.print(f"  Model: [cyan]{config.default_model}[/cyan]")
+            console.print(f"  Temperature: [cyan]{config.default_temperature}[/cyan]")
+            console.print(f"  Max Tokens: [cyan]{config.default_max_tokens}[/cyan]")
+            console.print(f"  Stream by default: [cyan]{config.stream_by_default}[/cyan]")
+            console.print()
+            
+            # Show upgrade tip if no API key
+            if not config.gemini_api_key and not config.github_token:
+                console.print("[yellow]💡 Tip: Get higher rate limits with:[/yellow]")
+                console.print("  • [cyan]rocket config set gemini-key YOUR_KEY[/cyan] - Unlimited requests")
+                console.print("  • [cyan]rocket login[/cyan] - 25 requests/day with GitHub")
+                console.print()
+            
+        elif action == "list":
+            # Show all available config keys
+            console.print("\n[cyan]⚙️  Available Configuration Keys:[/cyan]\n")
+            
+            table = Table(show_header=True, header_style="bold cyan")
+            table.add_column("Key", style="green")
+            table.add_column("Description")
+            
+            for key_name, description in list_config_keys().items():
+                table.add_row(key_name, description)
+            
+            console.print(table)
+            console.print()
+            console.print("[dim]Use 'rocket config set --key KEY --value VALUE' to set a value[/dim]")
             console.print()
             
         elif action == "set":
-            if not key or not value:
+            if not key or value is None:
                 console.print("[red]❌ Error: Provide both --key and --value[/red]")
+                console.print("[dim]Example: rocket config set --key gemini-key --value YOUR_API_KEY[/dim]")
                 return
             
-            # Validate and set configuration
-            valid_keys = {
-                "model": "gemini_model",
-                "temperature": "temperature",
-                "max_retries": "max_retries",
-                "retry_delay": "retry_delay",
-                "api_key": "gemini_api_key"
-            }
+            # Resolve key alias (e.g., 'gemini-key' -> 'gemini_api_key')
+            resolved_key = resolve_config_key(key)
             
-            if key.lower() not in valid_keys:
+            # Check if key is valid
+            if not hasattr(config, resolved_key):
                 console.print(f"[red]❌ Error: Unknown config key '{key}'[/red]")
-                console.print(f"[yellow]Valid keys: {', '.join(valid_keys.keys())}[/yellow]")
+                console.print("[yellow]Run 'rocket config list' to see available keys[/yellow]")
                 return
             
-            attr_name = valid_keys[key.lower()]
-            
-            # Type conversion for numeric fields
+            # Type conversion based on current type
+            current_value = getattr(config, resolved_key)
             try:
-                if attr_name == "temperature":
+                if isinstance(current_value, bool):
+                    value = value.lower() in ('true', '1', 'yes', 'on')
+                elif isinstance(current_value, float):
                     value = float(value)
-                elif attr_name == "max_retries":
+                elif isinstance(current_value, int):
                     value = int(value)
-                elif attr_name == "retry_delay":
-                    value = float(value)
+                # strings stay as-is
             except ValueError:
                 console.print(f"[red]❌ Error: Invalid value type for {key}[/red]")
                 return
             
-            # Set the attribute
-            setattr(settings, attr_name, value)
-            console.print(f"[green]✅ Configuration updated: {key} = {value}[/green]")
-            logger.info(f"Configuration changed: {key} = {value}")
+            # Set and save
+            setattr(config, resolved_key, value)
+            save_config(config)
+            
+            # Mask sensitive values in output
+            display_value = value
+            if 'key' in resolved_key.lower() or 'token' in resolved_key.lower():
+                if value and len(str(value)) > 8:
+                    display_value = str(value)[:4] + '****' + str(value)[-4:]
+            
+            console.print(f"[green]✅ Configuration updated: {key} = {display_value}[/green]")
+            logger.info(f"Configuration changed: {resolved_key}")
+            
+            # Reset provider manager to pick up new config
+            _provider_manager = None
             
         elif action == "reset":
-            console.print("[yellow]⚠️  Resetting to default configuration...[/yellow]")
-            settings.gemini_model = "gemini-1.5-flash"
-            settings.temperature = 0.7
-            settings.max_retries = 3
-            settings.retry_delay = 1.0
-            console.print("[green]✅ Configuration reset to defaults[/green]")
+            console.print("[yellow]⚠️  Resetting configuration to defaults...[/yellow]")
+            
+            # Create fresh config (keeps API keys but resets preferences)
+            new_config = load_config()
+            new_config.preferred_provider = None
+            new_config.prefer_local = False
+            new_config.default_temperature = 0.7
+            new_config.default_max_tokens = 2048
+            new_config.default_model = "gemini-1.5-flash"
+            new_config.stream_by_default = True
+            
+            save_config(new_config)
+            console.print("[green]✅ Configuration reset to defaults (API keys preserved)[/green]")
             logger.info("Configuration reset to defaults")
+            
+            # Reset provider manager
+            _provider_manager = None
+        
+        else:
+            console.print(f"[red]❌ Unknown action: {action}[/red]")
+            console.print("[yellow]Valid actions: show, set, list, reset[/yellow]")
         
     except Exception as e:
         console.print(f"[red]Error: {str(e)}[/red]")
         logger.exception("Error in handle_config")
+        raise
+
+
+async def handle_status() -> None:
+    """
+    Handle status command - show provider status and rate limits.
+    
+    Shows which providers are available, their rate limits,
+    and which provider will be used for requests.
+    """
+    try:
+        console.print("\n[cyan]🚀 Rocket Provider Status[/cyan]\n")
+        
+        # Initialize provider manager
+        manager = await get_provider_manager()
+        status = await manager.get_status()
+        rate_limits = await manager.get_rate_limits()
+        active_provider = await manager.get_active_provider()
+        
+        # Create status table
+        table = Table(show_header=True, header_style="bold cyan")
+        table.add_column("Provider", style="bold")
+        table.add_column("Status")
+        table.add_column("Tier")
+        table.add_column("Rate Limit")
+        table.add_column("Active", justify="center")
+        
+        for name, provider_status in status.items():
+            # Status indicator
+            if provider_status.available:
+                if provider_status.is_rate_limited:
+                    status_str = "[yellow]⚠️ Rate Limited[/yellow]"
+                else:
+                    status_str = "[green]✅ Available[/green]"
+            else:
+                status_str = "[red]❌ Unavailable[/red]"
+            
+            # Tier
+            tier_str = provider_status.provider.tier.value.upper()
+            
+            # Rate limit info
+            limit_info = rate_limits.get(name)
+            if limit_info:
+                if limit_info.period == "unlimited":
+                    rate_str = "[green]Unlimited[/green]"
+                else:
+                    rate_str = f"{limit_info.remaining}/{limit_info.limit} per {limit_info.period}"
+            else:
+                rate_str = "N/A"
+            
+            # Active indicator
+            is_active = active_provider and active_provider.name == name
+            active_str = "[green]✓[/green]" if is_active else ""
+            
+            table.add_row(
+                provider_status.provider.display_name,
+                status_str,
+                tier_str,
+                rate_str,
+                active_str,
+            )
+        
+        console.print(table)
+        console.print()
+        
+        # Show active provider
+        if active_provider:
+            console.print(f"[bold]Active Provider:[/bold] {active_provider.display_name}")
+        else:
+            console.print("[yellow]⚠️ No providers available![/yellow]")
+            console.print("Try one of the following:")
+            console.print("  • Set a Gemini API key: [cyan]rocket config set -k gemini-key -v YOUR_KEY[/cyan]")
+            console.print("  • Start Ollama locally: [cyan]ollama serve[/cyan]")
+        
+        console.print()
+        
+    except Exception as e:
+        console.print(f"[red]Error checking status: {str(e)}[/red]")
+        logger.exception("Error in handle_status")
         raise
