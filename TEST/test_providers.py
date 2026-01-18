@@ -8,6 +8,7 @@ Tests the new multi-provider LLM system with:
 - Rate limit handling
 """
 
+import pytest
 import asyncio
 import sys
 from pathlib import Path
@@ -21,6 +22,7 @@ from rich.table import Table
 console = Console()
 
 
+@pytest.mark.asyncio
 async def test_provider_imports():
     """Test that all providers can be imported."""
     console.print("\n[bold cyan]Test 1: Provider Imports[/bold cyan]")

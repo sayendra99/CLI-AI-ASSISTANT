@@ -58,7 +58,7 @@ class GeminiProvider(LLMProvider):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-1.5-flash",
+        model: str = "gemini-2.0-flash-exp",
         max_retries: int = 3,
         retry_delay: float = 1.0,
     ):
@@ -66,7 +66,7 @@ class GeminiProvider(LLMProvider):
         
         Args:
             api_key: Gemini API key (required for BYOK)
-            model: Model to use (default: gemini-1.5-flash)
+            model: Model to use (default: gemini-2.0-flash-exp)
             max_retries: Number of retries on rate limit
             retry_delay: Base delay between retries (exponential backoff)
         """
