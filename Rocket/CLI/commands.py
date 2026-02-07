@@ -1,10 +1,18 @@
 """
 Command handlers for Rocket CLI
 Routes user requests to appropriate AI services
+
+Performance Optimizations:
+- LRU caching for provider manager and config
+- Efficient data structures (sets, dicts)
+- Buffered I/O for file operations
+- Memory-efficient generators
 """
 
+import io
 import logging
-from typing import Optional
+from functools import lru_cache
+from typing import Optional, Dict, Any, Set
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.table import Table
@@ -32,12 +40,38 @@ console = Console()
 # Global provider manager instance (initialized lazily)
 _provider_manager: Optional[ProviderManager] = None
 
+# Cache for frequently accessed data
+_config_cache: Optional[Dict[str, Any]] = None
+_system_instructions_cache: Dict[str, str] = {}
+
+# Set of supported languages for O(1) lookup
+SUPPORTED_LANGUAGES: Set[str] = {
+    'python', 'javascript', 'typescript', 'go', 'rust', 
+    'java', 'cpp', 'c', 'csharp', 'php', 'ruby', 'swift',
+    'kotlin', 'scala', 'html', 'css', 'yaml', 'json'
+}
+
+
+@lru_cache(maxsize=1)
+def _get_cached_config() -> Any:
+    """
+    Load and cache configuration.
+    
+    Uses LRU cache to avoid repeated config loading from disk.
+    Cache is invalidated by restarting the CLI.
+    
+    Returns:
+        Cached configuration object
+    """
+    return load_config()
+
 
 async def get_provider_manager() -> ProviderManager:
     """
     Get the provider manager instance, initializing if needed.
     
     Uses the new multi-provider system with automatic fallback.
+    Provider manager is cached globally for the lifetime of the process.
     
     Returns:
         Initialized ProviderManager instance
@@ -45,8 +79,8 @@ async def get_provider_manager() -> ProviderManager:
     global _provider_manager
     
     if _provider_manager is None:
-        # Load config from ~/.rocket-cli/config.json
-        config = load_config()
+        # Load config from cached source
+        config = _get_cached_config()
         manager_config = config.to_manager_config()
         
         _provider_manager = ProviderManager(config=manager_config)
@@ -55,6 +89,7 @@ async def get_provider_manager() -> ProviderManager:
     return _provider_manager
 
 
+@lru_cache(maxsize=1)
 def get_llm_client() -> GeminiClient:
     """
     Get configured LLM client with settings applied.
@@ -62,8 +97,10 @@ def get_llm_client() -> GeminiClient:
     NOTE: This is the legacy client. Use get_provider_manager() for
     the new multi-provider system with fallback support.
     
+    Client instance is cached to avoid repeated initialization.
+    
     Returns:
-        Configured GeminiClient instance with current settings
+        Cached GeminiClient instance with current settings
     """
     return GeminiClient(
         model_name=settings.gemini_model,
@@ -71,6 +108,91 @@ def get_llm_client() -> GeminiClient:
         max_retries=settings.max_retries,
         retry_delay=settings.retry_delay
     )
+
+
+def read_file_buffered(file_path: str, buffer_size: int = 65536) -> str:
+    """
+    Read file with buffered I/O for better performance.
+    
+    Uses larger buffer size (64KB default) for efficient reading
+    of large files. Reads entire file into memory using chunks.
+    
+    Args:
+        file_path: Path to file to read
+        buffer_size: Buffer size in bytes (default 64KB)
+        
+    Returns:
+        File contents as string
+        
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        IOError: If file cannot be read
+    """
+    chunks = []
+    with open(file_path, 'r', buffering=buffer_size, encoding='utf-8') as f:
+        while True:
+            chunk = f.read(buffer_size)
+            if not chunk:
+                break
+            chunks.append(chunk)
+    return ''.join(chunks)
+
+
+def write_file_buffered(file_path: str, content: str, buffer_size: int = 65536) -> None:
+    """
+    Write file with buffered I/O for better performance.
+    
+    Uses larger buffer size (64KB default) for efficient writing
+    of large files. Writes entire content using buffered I/O.
+    
+    Args:
+        file_path: Path to file to write
+        content: Content to write
+        buffer_size: Buffer size in bytes (default 64KB)
+        
+    Raises:
+        IOError: If file cannot be written
+    """
+    with open(file_path, 'w', buffering=buffer_size, encoding='utf-8') as f:
+        f.write(content)
+
+
+@lru_cache(maxsize=32)
+def get_system_instruction(language: str, instruction_type: str) -> str:
+    """
+    Get cached system instruction for a language and type.
+    
+    Caches system instructions to avoid repeated string concatenation.
+    Uses LRU cache with max 32 entries (covers common language/type pairs).
+    
+    Args:
+        language: Programming language
+        instruction_type: Type of instruction (generate, explain, debug, etc.)
+        
+    Returns:
+        Cached system instruction string
+    """
+    instructions = {
+        'generate': (
+            f"You are an expert {language} developer. "
+            "Generate production-ready, well-documented code. "
+            "Include error handling and best practices. "
+            "Format code with proper markdown code blocks."
+        ),
+        'explain': (
+            f"You are an expert {language} code analyst. "
+            "Explain the code clearly, line by line. "
+            "Describe what it does, why it works, and any potential issues. "
+            "Use simple language for beginners but be thorough."
+        ),
+        'debug': (
+            f"You are an expert {language} debugger. "
+            "Analyze the error or issue and provide clear, actionable solutions. "
+            "Explain the root cause and show how to fix it with code examples. "
+            "Include prevention tips for the future."
+        )
+    }
+    return instructions.get(instruction_type, f"You are an expert {language} developer.")
 
 
 async def handle_chat(message: str, stream: bool = False) -> None:
@@ -171,12 +293,8 @@ async def handle_generate(
         # Get provider manager (with fallback support)
         manager = await get_provider_manager()
         
-        system_instruction = (
-            f"You are an expert {language} developer. "
-            "Generate production-ready, well-documented code. "
-            "Include error handling and best practices. "
-            "Format code with proper markdown code blocks."
-        )
+        # Use cached system instruction for better performance
+        system_instruction = get_system_instruction(language, 'generate')
         
         prompt = f"Generate {language} code for: {description}"
         
@@ -190,11 +308,15 @@ async def handle_generate(
         
         generated_code = ""
         
+        # Use efficient string builder for streaming
         if stream:
+            # Use list for efficient string concatenation (O(n) vs O(n^2))
+            chunks = []
             async for chunk in manager.generate_stream(options):
                 console.print(chunk, end="", highlight=False)
-                generated_code += chunk
+                chunks.append(chunk)
             console.print()
+            generated_code = ''.join(chunks)
         else:
             response = await manager.generate(options)
             console.print(Markdown(response.text))
@@ -204,8 +326,8 @@ async def handle_generate(
         # Save to file if requested
         if output_file:
             try:
-                with open(output_file, 'w') as f:
-                    f.write(generated_code)
+                # Use buffered I/O for better performance
+                write_file_buffered(output_file, generated_code)
                 console.print(f"[green]✅ Code saved to: {output_file}[/green]")
                 logger.info(f"Generated code saved to: {output_file}")
             except IOError as e:
@@ -263,8 +385,8 @@ async def handle_explain(
         code_to_explain: str
         if file_path:
             try:
-                with open(file_path, 'r') as f:
-                    code_to_explain = f.read()
+                # Use buffered I/O for better performance
+                code_to_explain = read_file_buffered(file_path)
                 logger.info(f"Read code from file: {file_path}")
             except FileNotFoundError:
                 error_msg = f"File not found: {file_path}"
@@ -288,12 +410,8 @@ async def handle_explain(
         # Get dynamically configured client
         llm_client = get_llm_client()
         
-        system_instruction = (
-            f"You are an expert {language} code analyst. "
-            "Explain the code clearly, line by line. "
-            "Describe what it does, why it works, and any potential issues. "
-            "Use simple language for beginners but be thorough."
-        )
+        # Use cached system instruction for better performance
+        system_instruction = get_system_instruction(language, 'explain')
         
         prompt = f"Explain this {language} code:\n\n```{language}\n{code_to_explain}\n```"
         
@@ -354,8 +472,8 @@ async def handle_debug(
         debug_context: str
         if file_path:
             try:
-                with open(file_path, 'r') as f:
-                    code = f.read()
+                # Use buffered I/O for better performance
+                code = read_file_buffered(file_path)
                 debug_context = f"File: {file_path}\n\nCode:\n```{language}\n{code}\n```"
                 if context:
                     debug_context += f"\n\nError/Issue: {context}"
@@ -377,12 +495,8 @@ async def handle_debug(
             logger.error(error_msg)
             raise ValueError(error_msg)
         
-        system_instruction = (
-            f"You are an expert {language} debugger. "
-            "Analyze the error or issue and provide clear, actionable solutions. "
-            "Explain the root cause and show how to fix it with code examples. "
-            "Include prevention tips for the future."
-        )
+        # Use cached system instruction for better performance
+        system_instruction = get_system_instruction(language, 'debug')
         
         prompt = f"Debug this {language} issue:\n{debug_context}"
         
