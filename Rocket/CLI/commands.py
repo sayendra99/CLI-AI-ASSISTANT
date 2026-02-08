@@ -65,6 +65,21 @@ def _get_cached_config() -> Any:
     """
     return load_config()
 
+                                                                                                                                                                                                                                                                
+async def _cleanup_manager(manager: ProviderManager) -> None:
+    """
+    Cleanup provider manager sessions.
+    
+    Properly closes all HTTP sessions to avoid cleanup warnings.
+    """
+    try:
+        for provider_status in manager._providers.values():
+            provider = provider_status.provider
+            if hasattr(provider, 'close'):
+                await provider.close()
+    except Exception:
+        pass  # Ignore cleanup errors
+
 
 async def get_provider_manager() -> ProviderManager:
     """
@@ -205,6 +220,7 @@ async def handle_chat(message: str, stream: bool = False) -> None:
         message: User's question or request
         stream: Whether to stream the response
     """
+    manager = None
     try:
         console.print(f"\n[cyan]🚀 Rocket:[/cyan]", end=" ")
         
@@ -235,15 +251,9 @@ async def handle_chat(message: str, stream: bool = False) -> None:
             # Get full response
             response = await manager.generate(options)
             console.print(Markdown(response.text))
-            
-            # Show provider used
-            logger.info(f"Response from provider: {response.provider}")
         
-        # Log usage from rate limits if available
-        rate_limits = await manager.get_rate_limits()
-        for provider_name, limit_info in rate_limits.items():
-            if limit_info.remaining < limit_info.limit:
-                logger.info(f"{provider_name}: {limit_info.remaining}/{limit_info.limit} requests remaining")
+        # Cleanup sessions
+        await _cleanup_manager(manager)
         
     except RateLimitError as e:
         console.print(f"\n[yellow]{e.message}[/yellow]")
@@ -258,6 +268,10 @@ async def handle_chat(message: str, stream: bool = False) -> None:
         console.print(f"[red]Error: {str(e)}[/red]")
         logger.exception("Error in handle_chat")
         raise
+    finally:
+        # Cleanup provider sessions
+        if manager:
+            await _cleanup_manager(manager)
 
 
 async def handle_generate(

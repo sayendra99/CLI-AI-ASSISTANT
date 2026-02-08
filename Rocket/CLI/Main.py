@@ -14,9 +14,9 @@ from rich.logging import RichHandler
 
 # Configure logging with Rich formatting
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,  # Only show warnings and errors by default
     format="%(message)s",
-    handlers=[RichHandler(rich_tracebacks=True)]
+    handlers=[RichHandler(rich_tracebacks=True, show_path=False)]
 )
 logger = logging.getLogger(__name__)
 console = Console()
@@ -48,7 +48,6 @@ def chat(
     try:
         from Rocket.CLI.commands import handle_chat
         
-        logger.info(f"💬 Chat command: {message[:60]}...")
         # Run async handler synchronously
         asyncio.run(handle_chat(message=message, stream=stream))
         

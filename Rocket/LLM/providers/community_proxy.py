@@ -124,10 +124,11 @@ class CommunityProxyProvider(LLMProvider):
                 )
         return self._session
     
-    async def _close_session(self):
-        """Close the HTTP session."""
-        if self._session:
+    async def close(self):
+        """Close the HTTP session properly."""
+        if self._session and not self._session.closed:
             await self._session.close()
+            self._session = None
             self._session = None
     
     def _get_headers(self) -> Dict[str, str]:

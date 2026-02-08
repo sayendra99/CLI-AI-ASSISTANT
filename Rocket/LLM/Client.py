@@ -4,6 +4,11 @@ from dataclasses import dataclass, field
 from typing import AsyncIterator, List, Optional, Dict, Any, Union
 from contextlib import asynccontextmanager
 import time
+import warnings
+
+# Suppress deprecation warning for google.generativeai
+warnings.filterwarnings('ignore', category=FutureWarning, module='google.generativeai')
+
 import google.generativeai as generativeai
 from google.generativeai import types
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
