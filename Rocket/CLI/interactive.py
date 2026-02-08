@@ -136,25 +136,34 @@ def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
             b = int(mid[2] + (end[2] - mid[2]) * factor)
             gradient.append((r, g, b))
     
-    # Clean, modern logo design
+    # Clean, modern logo design with side-by-side panels
     logo = Text()
     logo.append("\n")
     
-    # Rocket emoji at top with padding
+    # Rocket emoji at top centered
     logo.append("                                  ", style="")
     logo.append("🚀", style="")
     logo.append("\n\n", style="")
     
-    # Top border
+    # Line 1: Top borders
     logo.append("    ╔", style=rgb_style(gradient[0]))
     logo.append("═" * 68, style=rgb_style(gradient[1]))
-    logo.append("╗\n", style=rgb_style(gradient[2]))
+    logo.append("╗", style=rgb_style(gradient[2]))
+    logo.append("  ", style="")
+    logo.append("★", style=f"bold {rgb_style(gradient[0])}")
+    logo.append("═" * 32, style=rgb_style(gradient[2]))
+    logo.append("★\n", style=f"bold {rgb_style(gradient[5])}")
     
-    # Main ROCKET logo with gradient
+    # Line 2: Empty + Title
     logo.append("    ║", style=rgb_style(gradient[0]))
     logo.append("                                                                    ", style="")
-    logo.append("║\n", style=rgb_style(gradient[0]))
+    logo.append("║", style=rgb_style(gradient[0]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[0])}")
+    logo.append("🚀 FREE & OPEN SOURCE", style=f"bold bright_green")
+    logo.append("      ★\n", style=f"bold {rgb_style(gradient[5])}")
     
+    # Line 3: ROCKET R + Multi-Language
     logo.append("    ║        ", style=rgb_style(gradient[0]))
     logo.append("██████╗  ", style=f"bold {rgb_style(gradient[0])} on black")
     logo.append("  ██████╗  ", style=f"bold {rgb_style(gradient[1])} on black")
@@ -163,8 +172,15 @@ def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
     logo.append(" ███████╗", style=f"bold {rgb_style(gradient[4])} on black")
     logo.append(" ████████╗", style=f"bold {rgb_style(gradient[5])} on black")
     logo.append("   ", style="")
-    logo.append("║\n", style=rgb_style(gradient[1]))
+    logo.append("║", style=rgb_style(gradient[1]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[1])}")
+    logo.append("Communicate in ", style=f"{rgb_style(gradient[3])}")
+    logo.append("ANY", style=f"bold bright_cyan")
+    logo.append(" language ", style=f"{rgb_style(gradient[3])}")
+    logo.append(" ★\n", style=f"bold {rgb_style(gradient[2])}")
     
+    # Line 4: Second row + Zero Cost
     logo.append("    ║        ", style=rgb_style(gradient[1]))
     logo.append("██╔══██╗ ", style=f"bold {rgb_style(gradient[0])} on black")
     logo.append(" ██╔═══██╗", style=f"bold {rgb_style(gradient[1])} on black")
@@ -173,8 +189,14 @@ def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
     logo.append(" ██╔════╝", style=f"bold {rgb_style(gradient[4])} on black")
     logo.append(" ╚══██╔══╝", style=f"bold {rgb_style(gradient[5])} on black")
     logo.append("   ", style="")
-    logo.append("║\n", style=rgb_style(gradient[2]))
+    logo.append("║", style=rgb_style(gradient[2]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[2])}")
+    logo.append("100% ", style=f"bold bright_green")
+    logo.append("Zero Cost Forever", style=f"{rgb_style(gradient[4])}")
+    logo.append("      ★\n", style=f"bold {rgb_style(gradient[3])}")
     
+    # Line 5: Third row + Local AI
     logo.append("    ║        ", style=rgb_style(gradient[2]))
     logo.append("██████╔╝ ", style=f"bold {rgb_style(gradient[0])} on black")
     logo.append(" ██║   ██║", style=f"bold {rgb_style(gradient[1])} on black")
@@ -183,8 +205,14 @@ def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
     logo.append(" █████╗  ", style=f"bold {rgb_style(gradient[4])} on black")
     logo.append("    ██║   ", style=f"bold {rgb_style(gradient[5])} on black")
     logo.append("   ", style="")
-    logo.append("║\n", style=rgb_style(gradient[3]))
+    logo.append("║", style=rgb_style(gradient[3]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[3])}")
+    logo.append("🔒 ", style="")
+    logo.append("Local AI • No API Keys", style=f"{rgb_style(gradient[5])}")
+    logo.append("     ★\n", style=f"bold {rgb_style(gradient[4])}")
     
+    # Line 6: Fourth row + Privacy
     logo.append("    ║        ", style=rgb_style(gradient[3]))
     logo.append("██╔══██╗ ", style=f"bold {rgb_style(gradient[0])} on black")
     logo.append(" ██║   ██║", style=f"bold {rgb_style(gradient[2])} on black")
@@ -193,8 +221,14 @@ def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
     logo.append(" ██╔══╝  ", style=f"bold {rgb_style(gradient[4])} on black")
     logo.append("    ██║   ", style=f"bold {rgb_style(gradient[5])} on black")
     logo.append("   ", style="")
-    logo.append("║\n", style=rgb_style(gradient[4]))
+    logo.append("║", style=rgb_style(gradient[4]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[4])}")
+    logo.append("Your data stays ", style=f"{rgb_style(gradient[4])}")
+    logo.append("private", style=f"bold bright_green")
+    logo.append("      ★\n", style=f"bold {rgb_style(gradient[5])}")
     
+    # Line 7: Fifth row + Commands
     logo.append("    ║        ", style=rgb_style(gradient[4]))
     logo.append("██║  ██║ ", style=f"bold {rgb_style(gradient[1])} on black")
     logo.append(" ╚██████╔╝", style=f"bold {rgb_style(gradient[2])} on black")
@@ -203,8 +237,14 @@ def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
     logo.append(" ███████╗", style=f"bold {rgb_style(gradient[5])} on black")
     logo.append("    ██║   ", style=f"bold {rgb_style(gradient[5])} on black")
     logo.append("   ", style="")
-    logo.append("║\n", style=rgb_style(gradient[5]))
+    logo.append("║", style=rgb_style(gradient[5]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[5])}")
+    logo.append("⚡ Quick: ", style=f"{rgb_style(gradient[4])}")
+    logo.append("/generate /explain", style=f"bold bright_cyan")
+    logo.append("  ★\n", style=f"bold {rgb_style(gradient[0])}")
     
+    # Line 8: Sixth row + More Commands
     logo.append("    ║        ", style=rgb_style(gradient[5]))
     logo.append("╚═╝  ╚═╝ ", style=f"bold {rgb_style(gradient[2])} on black")
     logo.append("  ╚═════╝ ", style=f"bold {rgb_style(gradient[3])} on black")
@@ -213,28 +253,51 @@ def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
     logo.append(" ╚══════╝", style=f"bold {rgb_style(gradient[5])} on black")
     logo.append("    ╚═╝   ", style=f"bold {rgb_style(gradient[5])} on black")
     logo.append("   ", style="")
-    logo.append("║\n", style=rgb_style(gradient[5]))
+    logo.append("║", style=rgb_style(gradient[5]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[0])}")
+    logo.append("         ", style="")
+    logo.append("/debug help", style=f"bold bright_cyan")
+    logo.append("          ★\n", style=f"bold {rgb_style(gradient[1])}")
     
+    # Line 9: Empty + Status
     logo.append("    ║", style=rgb_style(gradient[5]))
     logo.append("                                                                    ", style="")
-    logo.append("║\n", style=rgb_style(gradient[5]))
+    logo.append("║", style=rgb_style(gradient[5]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[2])}")
+    logo.append("Status: ", style=f"{rgb_style(gradient[3])}")
+    logo.append("Ollama ", style=f"{rgb_style(gradient[4])}")
+    logo.append("✅ Fast", style="bold bright_green")
+    logo.append("      ★\n", style=f"bold {rgb_style(gradient[3])}")
     
-    # Subtitle
+    # Line 10: Subtitle + Usage
     logo.append("    ║              ", style=rgb_style(gradient[5]))
     logo.append("🚀  ", style="")
     logo.append("AI-Powered Coding Assistant", style=f"bold {rgb_style(gradient[3])}")
     logo.append("  🚀", style="")
-    logo.append("              ║\n", style=rgb_style(gradient[5]))
+    logo.append("              ║", style=rgb_style(gradient[5]))
+    logo.append("  ", style="")
+    logo.append("★  ", style=f"bold {rgb_style(gradient[4])}")
+    logo.append("Messages Today: ", style=f"{rgb_style(gradient[4])}")
+    logo.append("12", style=f"bold {rgb_style(gradient[5])}")
+    logo.append("          ★\n", style=f"bold {rgb_style(gradient[4])}")
     
+    # Line 11: Partner text + Bottom
     logo.append("    ║                  ", style=rgb_style(gradient[5]))
     logo.append("Your Personal Development Partner", style=f"{rgb_style(gradient[2])} italic")
-    logo.append("                  ║\n", style=rgb_style(gradient[5]))
+    logo.append("                  ║", style=rgb_style(gradient[5]))
+    logo.append("  ", style="")
+    logo.append("★", style=f"bold {rgb_style(gradient[5])}")
+    logo.append("═" * 32, style=rgb_style(gradient[3]))
+    logo.append("★\n", style=f"bold {rgb_style(gradient[5])}")
     
+    # Line 12: Empty
     logo.append("    ║", style=rgb_style(gradient[5]))
     logo.append("                                                                    ", style="")
     logo.append("║\n", style=rgb_style(gradient[5]))
     
-    # Bottom border
+    # Line 13: Bottom border
     logo.append("    ╚", style=rgb_style(gradient[5]))
     logo.append("═" * 68, style=rgb_style(gradient[3]))
     logo.append("╝\n", style=rgb_style(gradient[0]))
@@ -244,24 +307,194 @@ def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
     # Session info with gradient colors
     session = SessionManager(name=session_name)
     greeting = Text()
-    greeting.append("\n              ╭", style=rgb_style(gradient[0]))
-    greeting.append("─" * 48, style=rgb_style(gradient[2]))
+    greeting.append("\n    ╭", style=rgb_style(gradient[0]))
+    greeting.append("═" * 56, style=rgb_style(gradient[2]))
+    greeting.append("╮", style=rgb_style(gradient[4]))
+    greeting.append("  ", style="")
+    greeting.append("╭", style=rgb_style(gradient[0]))
+    greeting.append("═" * 44, style=rgb_style(gradient[2]))
     greeting.append("╮\n", style=rgb_style(gradient[4]))
-    greeting.append("              │  🎉 ", style=rgb_style(gradient[0]))
+    
+    # Line 1: Greeting + Quick Commands Header
+    greeting.append("    │ 🎉 ", style=rgb_style(gradient[0]))
+    greeting.append("Greetings from Sai! ", style=f"bold bright_cyan")
     greeting.append(session.get_greeting(), style=f"bold {rgb_style(gradient[3])}")
-    greeting.append("  │\n", style=rgb_style(gradient[2]))
-    greeting.append("              │  💼 Session: ", style=rgb_style(gradient[2]))
-    greeting.append(session_name, style=f"bold {rgb_style(gradient[1])} on black")
-    greeting.append("  │  ⚡ ", style="")
-    greeting.append("Ollama", style=f"bold {rgb_style(gradient[3])} on black")
-    greeting.append("  │  🎯 ", style="")
-    greeting.append("Ready!", style=f"bold {rgb_style(gradient[4])} on black")
-    greeting.append("  │\n", style=rgb_style(gradient[4]))
-    greeting.append("              │  💡 Type ", style=rgb_style(gradient[5]))
-    greeting.append("help", style=f"bold {rgb_style(gradient[3])} on black")
-    greeting.append(" or just chat! ✨           │\n", style="white")
-    greeting.append("              ╰", style=rgb_style(gradient[5]))
-    greeting.append("─" * 48, style=rgb_style(gradient[3]))
+    greeting.append(" 🌙", style="")
+    greeting.append("   │", style=rgb_style(gradient[2]))
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[0]))
+    greeting.append("⚡ QUICK COMMANDS", style=f"bold {rgb_style(gradient[4])}")
+    greeting.append("                 │\n", style=rgb_style(gradient[2]))
+    
+    # Line 2: Mission + Command 1
+    greeting.append("    │ ", style=rgb_style(gradient[1]))
+    greeting.append("💪 ", style="")
+    greeting.append("\"Struggle for Existence - Code Your Future\"", style=f"bold italic {rgb_style(gradient[4])}")
+    greeting.append("  │", style=rgb_style(gradient[2]))
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[1]))
+    greeting.append("/generate", style=f"bold bright_cyan")
+    greeting.append(" [desc] - Generate code    │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 3: Separator + Command 2
+    greeting.append("    │ ", style=rgb_style(gradient[2]))
+    greeting.append("─" * 54, style=rgb_style(gradient[3]))
+    greeting.append(" │", style=rgb_style(gradient[4]))
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[2]))
+    greeting.append("/explain", style=f"bold bright_cyan")
+    greeting.append(" [code] - Explain concepts  │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 4: ROCKET description + Command 3
+    greeting.append("    │ 🚀 ", style=rgb_style(gradient[3]))
+    greeting.append("ROCKET", style=f"bold {rgb_style(gradient[4])}")
+    greeting.append(" is your ", style=f"{rgb_style(gradient[3])}")
+    greeting.append("FREE, open-source", style=f"bold bright_green")
+    greeting.append(" AI companion │", style=f"{rgb_style(gradient[3])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[3]))
+    greeting.append("/debug", style=f"bold bright_cyan")
+    greeting.append(" [error] - Fix issues       │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 5: Built for developers + Command 4
+    greeting.append("    │   Built for developers who refuse to be limited.  │", style=f"{rgb_style(gradient[4])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[4]))
+    greeting.append("help", style=f"bold bright_cyan")
+    greeting.append(" - Show all commands         │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 6: Empty + Separator
+    greeting.append("    │                                                        │", style=rgb_style(gradient[5]))
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[5]))
+    greeting.append("─" * 40, style=rgb_style(gradient[3]))
+    greeting.append("  │\n", style=rgb_style(gradient[0]))
+    
+    # Line 7: Programming languages + Examples Header
+    greeting.append("    │ 💻 ", style=rgb_style(gradient[0]))
+    greeting.append("Program in ANY language:", style=f"bold {rgb_style(gradient[4])}")
+    greeting.append(" Python, JS, Java  │", style=f"{rgb_style(gradient[3])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[1]))
+    greeting.append("📝 EXAMPLES", style=f"bold {rgb_style(gradient[4])}")
+    greeting.append("                      │\n", style=rgb_style(gradient[2]))
+    
+    # Line 8: More languages + Example 1
+    greeting.append("    │   C++, Go, Rust, PHP, Ruby, Swift, Kotlin & more!  │", style=f"{rgb_style(gradient[5])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[2]))
+    greeting.append("\"Create a REST API\"", style=f"italic {rgb_style(gradient[4])}")
+    greeting.append("              │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 9: Empty + Example 2
+    greeting.append("    │                                                        │", style=rgb_style(gradient[1]))
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[3]))
+    greeting.append("\"Explain async/await\"", style=f"italic {rgb_style(gradient[4])}")
+    greeting.append("            │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 10: Speak your language + Example 3
+    greeting.append("    │ 🌍 ", style=rgb_style(gradient[2]))
+    greeting.append("Speak YOUR language:", style=f"bold {rgb_style(gradient[4])}")
+    greeting.append(" English, Hindi,     │", style=f"{rgb_style(gradient[3])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[4]))
+    greeting.append("\"Debug my code error\"", style=f"italic {rgb_style(gradient[4])}")
+    greeting.append("           │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 11: More languages + Native language note
+    greeting.append("    │   Spanish, French, German, Chinese, Arabic & 50+!  │", style=f"{rgb_style(gradient[5])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[5]))
+    greeting.append("या हिंदी में बात करें! ", style=f"italic {rgb_style(gradient[4])}")
+    greeting.append("       │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 12: Empty + Separator
+    greeting.append("    │                                                        │", style=rgb_style(gradient[3]))
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[0]))
+    greeting.append("─" * 40, style=rgb_style(gradient[3]))
+    greeting.append("  │\n", style=rgb_style(gradient[1]))
+    
+    # Line 13: Core Values Header + AI Status
+    greeting.append("    │ ✨ ", style=rgb_style(gradient[4]))
+    greeting.append("Core Values:", style=f"bold {rgb_style(gradient[4])}")
+    greeting.append("                                  │", style=f"{rgb_style(gradient[1])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[1]))
+    greeting.append("🤖 AI: ", style=f"{rgb_style(gradient[3])}")
+    greeting.append("Ollama", style=f"bold bright_green")
+    greeting.append(" ", style="")
+    greeting.append("✅ Ready", style=f"bold bright_green")
+    greeting.append("        │\n", style=f"{rgb_style(gradient[2])}")
+    
+    # Line 14: Value 1 + Session info
+    greeting.append("    │   • ", style=rgb_style(gradient[5]))
+    greeting.append("100% Free Forever", style=f"bold bright_green")
+    greeting.append(" - No costs, no limits   │", style=f"{rgb_style(gradient[3])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[2]))
+    greeting.append("💼 Session: ", style=f"{rgb_style(gradient[3])}")
+    greeting.append(session_name, style=f"bold bright_cyan")
+    greeting.append("              │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Line 15: Value 2 + Messages count
+    greeting.append("    │   • ", style=rgb_style(gradient[0]))
+    greeting.append("Your Privacy Matters", style=f"bold bright_cyan")
+    greeting.append(" - Runs locally       │", style=f"{rgb_style(gradient[4])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[3]))
+    greeting.append("📊 Today: ", style=f"{rgb_style(gradient[4])}")
+    greeting.append("12", style=f"bold {rgb_style(gradient[5])}")
+    greeting.append(" msgs  ", style=f"{rgb_style(gradient[4])}")
+    greeting.append("🔥 5d", style=f"bold {rgb_style(gradient[5])}")
+    greeting.append("    │\n", style=f"{rgb_style(gradient[4])}")
+    
+    # Line 16: Value 3 + Response time
+    greeting.append("    │   • ", style=rgb_style(gradient[1]))
+    greeting.append("No API Keys Required", style=f"bold bright_green")
+    greeting.append(" - No vendor lock-in  │", style=f"{rgb_style(gradient[5])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[4]))
+    greeting.append("⚡ Response: ", style=f"{rgb_style(gradient[4])}")
+    greeting.append("~0.8s", style=f"bold bright_cyan")
+    greeting.append("            │\n", style=f"{rgb_style(gradient[5])}")
+    
+    # Line 17: Value 4 + GitHub link
+    greeting.append("    │   • ", style=rgb_style(gradient[2]))
+    greeting.append("Built by Developers", style=f"bold bright_cyan")
+    greeting.append(" - Community-driven   │", style=f"{rgb_style(gradient[3])}")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[5]))
+    greeting.append("⭐ Star us on GitHub!", style=f"bold {rgb_style(gradient[4])}")
+    greeting.append("         │\n", style=f"{rgb_style(gradient[0])}")
+    
+    # Line 18: Bottom separator
+    greeting.append("    │ ", style=rgb_style(gradient[3]))
+    greeting.append("─" * 54, style=rgb_style(gradient[3]))
+    greeting.append(" │", style=rgb_style(gradient[0]))
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[0]))
+    greeting.append("─" * 40, style=rgb_style(gradient[3]))
+    greeting.append("  │\n", style=rgb_style(gradient[1]))
+    
+    # Line 19: Quick start message
+    greeting.append("    │ 💡 Type ", style=rgb_style(gradient[5]))
+    greeting.append("help", style=f"bold bright_cyan")
+    greeting.append(" or just start chatting naturally! ✨   │", style="white")
+    greeting.append("  ", style="")
+    greeting.append("│  ", style=rgb_style(gradient[1]))
+    greeting.append("Type ", style=f"{rgb_style(gradient[3])}")
+    greeting.append("/clear", style=f"bold bright_cyan")
+    greeting.append(" to clear screen     │\n", style=f"{rgb_style(gradient[3])}")
+    
+    # Bottom borders
+    greeting.append("    ╰", style=rgb_style(gradient[5]))
+    greeting.append("═" * 56, style=rgb_style(gradient[3]))
+    greeting.append("╯", style=rgb_style(gradient[0]))
+    greeting.append("  ", style="")
+    greeting.append("╰", style=rgb_style(gradient[1]))
+    greeting.append("═" * 44, style=rgb_style(gradient[3]))
     greeting.append("╯\n", style=rgb_style(gradient[0]))
     
     console.print(greeting)
