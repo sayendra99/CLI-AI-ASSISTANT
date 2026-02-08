@@ -4,7 +4,7 @@ Rocket CLI - Optimized Performance Entry Point
 
 Performance Optimizations:
 - Efficient data structures (sets, dicts, generators)
-- LRU caching for repeated operations
+- LRU caching for frequently accessed data.
 - Lazy loading of modules
 - Buffered I/O for large files
 - Memory-efficient string operations
