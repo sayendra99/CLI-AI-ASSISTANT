@@ -192,12 +192,12 @@ class ProviderManager:
         
         self._initialized = True
         
-        # Log status
+        # Log status (debug only)
         available_providers = [
             name for name, status in self._providers.items() 
             if status.available
         ]
-        logger.info(f"Provider manager initialized. Available: {available_providers}")
+        logger.debug(f"Provider manager initialized. Available: {available_providers}")
     
     async def _check_provider(self, provider: LLMProvider) -> ProviderStatus:
         """Check a provider's availability and rate limits."""
@@ -328,7 +328,7 @@ class ProviderManager:
                 if response.rate_limit:
                     status.rate_limit = response.rate_limit
                 
-                logger.info(f"Generation successful using {provider.name}")
+                logger.debug(f"Generation successful using {provider.name}")
                 return response
                 
             except RateLimitError as e:

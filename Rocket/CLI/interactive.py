@@ -63,41 +63,97 @@ class SessionManager:
 
 
 def display_welcome_banner(session_name: str):
-    """Display enthusiastic welcome banner with branding."""
+    """Display welcome banner with giant colorful rocket ship."""
+    from rich.text import Text
+    from rich.console import Console
     
-    welcome_art = """
-    ╔═══════════════════════════════════════════════════════════╗
-    ║                                                           ║
-    ║     🚀  ROCKET CLI - AI Coding Assistant  🚀             ║
-    ║                                                           ║
-    ║          Your Personal AI Development Partner            ║
-    ║                                                           ║
-    ╚═══════════════════════════════════════════════════════════╝
-    """
+    console = Console()
+    logo = Text()
     
-    console.print(Panel(
-        welcome_art,
-        style="bold cyan",
-        border_style="bright_blue",
-        box=box.DOUBLE
-    ))
+    # Stars border
+    logo.append("\n    ", style="")
+    for color in ["red", "yellow", "green", "cyan", "blue", "magenta"]:
+        logo.append("★", style=f"bold {color}")
+    logo.append(" " * 58, style="")
+    for color in ["magenta", "blue", "cyan", "green", "yellow", "red"]:
+        logo.append("★", style=f"bold {color}")
+    logo.append("\n\n", style="")
+    
+    # Giant Rocket Ship ASCII art
+    rocket_lines = [
+        ("                    ", [("╔═══╗", "bold bright_red on black")]),
+        ("                    ", [("║", "bold bright_red on black"), ("███", "bold bright_yellow on black"), ("║", "bold bright_red on black")]),
+        ("                   ", [("╔", "bold red on black"), ("═", "bold yellow on black"), ("╩", "bold bright_red on black"), ("═", "bold yellow on black"), ("╩", "bold bright_red on black"), ("═", "bold yellow on black"), ("╗", "bold red on black")]),
+        ("                   ", [("║", "bold red on black"), ("█████", "bold bright_cyan on black"), ("║", "bold red on black"), ("   ", ""), ("╔═══════════════════════════════╗", "bold bright_magenta")]),
+        ("                   ", [("║", "bold red on black"), ("█", "bold bright_cyan on black"), ("▓▓▓", "bold cyan on black"), ("█", "bold bright_cyan on black"), ("║", "bold red on black"), ("   ", ""), ("║  ", "bold bright_magenta"), ("R  O  C  K  E  T", "bold bright_cyan"), ("    ", ""), ("C  L  I", "bold bright_yellow"), ("  ║", "bold bright_magenta")]),
+        ("                   ", [("║", "bold red on black"), ("█", "bold bright_cyan on black"), ("███", "bold bright_white on black"), ("█", "bold bright_cyan on black"), ("║", "bold red on black"), ("   ", ""), ("╚═══════════════════════════════╝", "bold bright_magenta")]),
+        ("                   ", [("║", "bold bright_blue on black"), ("█████", "bold bright_white on black"), ("║", "bold bright_blue on black")]),
+        ("                  ", [("╔", "bold blue on black"), ("═", "bold cyan on black"), ("╩", "bold bright_blue on black"), ("═══", "bold white on black"), ("╩", "bold bright_blue on black"), ("═", "bold cyan on black"), ("╗", "bold blue on black")]),
+        ("                  ", [("║", "bold blue on black"), ("███████", "bold bright_white on black"), ("║", "bold blue on black")]),
+        ("                  ", [("║", "bold blue on black"), ("█", "bold bright_white on black"), ("▓▓▓▓▓", "bold white on black"), ("█", "bold bright_white on black"), ("║", "bold blue on black")]),
+        ("                  ", [("║", "bold blue on black"), ("███████", "bold bright_white on black"), ("║", "bold blue on black")]),
+        ("                  ", [("╠", "bold bright_green on black"), ("═══════", "bold green on black"), ("╣", "bold bright_green on black")]),
+        ("                  ", [("║", "bold green on black"), ("███████", "bold bright_green on black"), ("║", "bold green on black")]),
+        ("                  ", [("║", "bold green on black"), ("███████", "bold bright_green on black"), ("║", "bold green on black")]),
+        ("                  ", [("╠", "bold bright_yellow on black"), ("═══════", "bold yellow on black"), ("╣", "bold bright_yellow on black")]),
+        ("                  ", [("║", "bold yellow on black"), ("███████", "bold bright_yellow on black"), ("║", "bold yellow on black")]),
+        ("                  ", [("║", "bold yellow on black"), ("███████", "bold bright_yellow on black"), ("║", "bold yellow on black")]),
+        ("                  ", [("╚", "bold bright_yellow on black"), ("═══════", "bold yellow on black"), ("╝", "bold bright_yellow on black")]),
+        ("                 ", [("╔", "bold red on black"), ("═", "bold bright_red on black"), ("╝", "bold bright_yellow on black"), ("     ", ""), ("╚", "bold bright_yellow on black"), ("═", "bold bright_red on black"), ("╗", "bold red on black")]),
+        ("                ", [("╔", "bold bright_red on black"), ("╝", "bold bright_yellow on black"), ("         ", ""), ("╚", "bold bright_yellow on black"), ("╗", "bold bright_red on black")]),
+        ("               ", [("║", "bold bright_red on black"), ("🔥", ""), ("         ", ""), ("🔥", ""), ("║", "bold bright_red on black")]),
+        ("               ", [("╚", "bold bright_yellow on black"), ("═══════════", "bold bright_red on black"), ("╝", "bold bright_yellow on black")]),
+    ]
+    
+    for prefix, parts in rocket_lines:
+        logo.append(prefix, style="")
+        for text, style in parts:
+            logo.append(text, style=style)
+        logo.append("\n", style="")
+    
+    # Subtitle
+    logo.append("\n              🚀 ", style="")
+    logo.append("AI-Powered Coding Assistant", style="bold bright_cyan")
+    logo.append(" 🚀\n", style="")
+    logo.append("                ", style="")
+    logo.append("Your Personal Development Partner", style="cyan italic")
+    logo.append("\n\n    ", style="")
+    
+    # Bottom stars
+    for color in ["red", "yellow", "green", "cyan", "blue", "magenta"]:
+        logo.append("★", style=f"bold {color}")
+    logo.append(" " * 58, style="")
+    for color in ["magenta", "blue", "cyan", "green", "yellow", "red"]:
+        logo.append("★", style=f"bold {color}")
+    logo.append("\n", style="")
+    
+    console.print(logo)
+    console.print()
     
     # Session info
     session = SessionManager(name=session_name)
-    greeting_text = Text()
-    greeting_text.append("\n  ", style="")
-    greeting_text.append(session.get_greeting(), style="bold green")
-    greeting_text.append("\n\n  ", style="")
-    greeting_text.append(f"Session: {session_name}", style="cyan")
-    greeting_text.append("\n  ", style="")
-    greeting_text.append("Provider: Ollama (Local)", style="yellow")
-    greeting_text.append("\n  ", style="")
-    greeting_text.append("Type ", style="dim")
-    greeting_text.append("help", style="bold magenta")
-    greeting_text.append(" for commands or just start chatting! ", style="dim")
-    greeting_text.append("✨\n", style="")
+    greeting = Text()
+    greeting.append("\n              ╭", style="bold cyan")
+    greeting.append("─" * 48, style="bold magenta")
+    greeting.append("╮\n", style="bold cyan")
+    greeting.append("              │  🎉 ", style="bold cyan")
+    greeting.append(session.get_greeting(), style="bold green")
+    greeting.append("  │\n", style="bold magenta")
+    greeting.append("              │  💼 Session: ", style="bold magenta")
+    greeting.append(session_name, style="bold bright_cyan on black")
+    greeting.append("  │  ⚡ ", style="")
+    greeting.append("Ollama", style="bold bright_yellow on black")
+    greeting.append("  │  🎯 ", style="")
+    greeting.append("Ready!", style="bold bright_green on black")
+    greeting.append("  │\n", style="bold yellow")
+    greeting.append("              │  💡 Type ", style="bold yellow")
+    greeting.append("help", style="bold bright_magenta on black")
+    greeting.append(" or just chat! ✨🌈           │\n", style="white")
+    greeting.append("              ╰", style="bold green")
+    greeting.append("─" * 48, style="bold blue")
+    greeting.append("╯\n", style="bold green")
     
-    console.print(greeting_text)
+    console.print(greeting)
     console.print()
     
     return session
