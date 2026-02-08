@@ -1,0 +1,94 @@
+# Hindi (हिन्दी) translations for Rocket CLI
+# This file contains common CLI messages translated to Hindi
+
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: hi\n"
+
+# General messages
+msgid "Hello, World!"
+msgstr "नमस्ते, दुनिया!"
+
+msgid "Welcome to Rocket CLI"
+msgstr "रॉकेट CLI में आपका स्वागत है"
+
+msgid "Error"
+msgstr "त्रुटि"
+
+msgid "Success"
+msgstr "सफलता"
+
+msgid "Warning"
+msgstr "चेतावनी"
+
+# Command descriptions
+msgid "Chat with Rocket AI Assistant for coding solutions."
+msgstr "कोडिंग समाधान के लिए रॉकेट AI सहायक के साथ चैट करें।"
+
+msgid "Generate code snippets using Rocket AI Assistant."
+msgstr "रॉकेट AI सहायक का उपयोग करके कोड स्निपेट उत्पन्न करें।"
+
+msgid "Explain code from a file or snippet."
+msgstr "फ़ाइल या स्निपेट से कोड की व्याख्या करें।"
+
+msgid "Debug errors and issues in your code."
+msgstr "अपने कोड में त्रुटियों और समस्याओं को डीबग करें।"
+
+msgid "Optimize code for performance, readability, or security."
+msgstr "प्रदर्शन, पठनीयता, या सुरक्षा के लिए कोड को अनुकूलित करें।"
+
+# Common operations
+msgid "Loading configuration..."
+msgstr "कॉन्फ़िगरेशन लोड हो रहा है..."
+
+msgid "File not found"
+msgstr "फ़ाइल नहीं मिली"
+
+msgid "Invalid input"
+msgstr "अमान्य इनपुट"
+
+msgid "Operation completed successfully"
+msgstr "ऑपरेशन सफलतापूर्वक पूरा हुआ"
+
+msgid "Authentication required"
+msgstr "प्रमाणीकरण आवश्यक"
+
+msgid "Logged in successfully"
+msgstr "सफलतापूर्वक लॉग इन किया गया"
+
+msgid "Logged out successfully"
+msgstr "सफलतापूर्वक लॉग आउट किया गया"
+
+# File operations
+msgid "Reading file: {filename}"
+msgstr "फ़ाइल पढ़ी जा रही है: {filename}"
+
+msgid "Writing file: {filename}"
+msgstr "फ़ाइल लिखी जा रही है: {filename}"
+
+msgid "File saved successfully"
+msgstr "फ़ाइल सफलतापूर्वक सहेजी गई"
+
+# Error messages
+msgid "Connection error"
+msgstr "कनेक्शन त्रुटि"
+
+msgid "Rate limit exceeded"
+msgstr "दर सीमा पार हो गई"
+
+msgid "Invalid API key"
+msgstr "अमान्य API कुंजी"
+
+msgid "Timeout error"
+msgstr "समय समाप्त त्रुटि"
+
+# Status messages
+msgid "Checking provider status..."
+msgstr "प्रदाता की स्थिति जाँची जा रही है..."
+
+msgid "All systems operational"
+msgstr "सभी सिस्टम संचालित हैं"
+
+msgid "Provider unavailable"
+msgstr "प्रदाता अनुपलब्ध"

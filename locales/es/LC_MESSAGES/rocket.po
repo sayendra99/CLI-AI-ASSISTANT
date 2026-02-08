@@ -1,0 +1,94 @@
+# Spanish (Español) translations for Rocket CLI
+# This file contains common CLI messages translated to Spanish
+
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: es\n"
+
+# General messages
+msgid "Hello, World!"
+msgstr "¡Hola, Mundo!"
+
+msgid "Welcome to Rocket CLI"
+msgstr "Bienvenido a Rocket CLI"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Success"
+msgstr "Éxito"
+
+msgid "Warning"
+msgstr "Advertencia"
+
+# Command descriptions
+msgid "Chat with Rocket AI Assistant for coding solutions."
+msgstr "Chatea con el Asistente de IA Rocket para soluciones de codificación."
+
+msgid "Generate code snippets using Rocket AI Assistant."
+msgstr "Genera fragmentos de código usando el Asistente de IA Rocket."
+
+msgid "Explain code from a file or snippet."
+msgstr "Explica código desde un archivo o fragmento."
+
+msgid "Debug errors and issues in your code."
+msgstr "Depura errores y problemas en tu código."
+
+msgid "Optimize code for performance, readability, or security."
+msgstr "Optimiza código para rendimiento, legibilidad o seguridad."
+
+# Common operations
+msgid "Loading configuration..."
+msgstr "Cargando configuración..."
+
+msgid "File not found"
+msgstr "Archivo no encontrado"
+
+msgid "Invalid input"
+msgstr "Entrada no válida"
+
+msgid "Operation completed successfully"
+msgstr "Operación completada exitosamente"
+
+msgid "Authentication required"
+msgstr "Autenticación requerida"
+
+msgid "Logged in successfully"
+msgstr "Inicio de sesión exitoso"
+
+msgid "Logged out successfully"
+msgstr "Cierre de sesión exitoso"
+
+# File operations
+msgid "Reading file: {filename}"
+msgstr "Leyendo archivo: {filename}"
+
+msgid "Writing file: {filename}"
+msgstr "Escribiendo archivo: {filename}"
+
+msgid "File saved successfully"
+msgstr "Archivo guardado exitosamente"
+
+# Error messages
+msgid "Connection error"
+msgstr "Error de conexión"
+
+msgid "Rate limit exceeded"
+msgstr "Límite de tasa excedido"
+
+msgid "Invalid API key"
+msgstr "Clave API no válida"
+
+msgid "Timeout error"
+msgstr "Error de tiempo de espera"
+
+# Status messages
+msgid "Checking provider status..."
+msgstr "Verificando estado del proveedor..."
+
+msgid "All systems operational"
+msgstr "Todos los sistemas operativos"
+
+msgid "Provider unavailable"
+msgstr "Proveedor no disponible"

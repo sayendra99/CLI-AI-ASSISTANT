@@ -1,0 +1,94 @@
+# French (Français) translations for Rocket CLI
+# This file contains common CLI messages translated to French
+
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr\n"
+
+# General messages
+msgid "Hello, World!"
+msgstr "Bonjour, Monde!"
+
+msgid "Welcome to Rocket CLI"
+msgstr "Bienvenue sur Rocket CLI"
+
+msgid "Error"
+msgstr "Erreur"
+
+msgid "Success"
+msgstr "Succès"
+
+msgid "Warning"
+msgstr "Avertissement"
+
+# Command descriptions
+msgid "Chat with Rocket AI Assistant for coding solutions."
+msgstr "Discutez avec l'Assistant IA Rocket pour des solutions de codage."
+
+msgid "Generate code snippets using Rocket AI Assistant."
+msgstr "Générez des extraits de code avec l'Assistant IA Rocket."
+
+msgid "Explain code from a file or snippet."
+msgstr "Expliquez le code d'un fichier ou d'un extrait."
+
+msgid "Debug errors and issues in your code."
+msgstr "Déboguez les erreurs et problèmes dans votre code."
+
+msgid "Optimize code for performance, readability, or security."
+msgstr "Optimisez le code pour les performances, la lisibilité ou la sécurité."
+
+# Common operations
+msgid "Loading configuration..."
+msgstr "Chargement de la configuration..."
+
+msgid "File not found"
+msgstr "Fichier introuvable"
+
+msgid "Invalid input"
+msgstr "Entrée non valide"
+
+msgid "Operation completed successfully"
+msgstr "Opération terminée avec succès"
+
+msgid "Authentication required"
+msgstr "Authentification requise"
+
+msgid "Logged in successfully"
+msgstr "Connexion réussie"
+
+msgid "Logged out successfully"
+msgstr "Déconnexion réussie"
+
+# File operations
+msgid "Reading file: {filename}"
+msgstr "Lecture du fichier: {filename}"
+
+msgid "Writing file: {filename}"
+msgstr "Écriture du fichier: {filename}"
+
+msgid "File saved successfully"
+msgstr "Fichier enregistré avec succès"
+
+# Error messages
+msgid "Connection error"
+msgstr "Erreur de connexion"
+
+msgid "Rate limit exceeded"
+msgstr "Limite de taux dépassée"
+
+msgid "Invalid API key"
+msgstr "Clé API non valide"
+
+msgid "Timeout error"
+msgstr "Erreur de délai d'attente"
+
+# Status messages
+msgid "Checking provider status..."
+msgstr "Vérification de l'état du fournisseur..."
+
+msgid "All systems operational"
+msgstr "Tous les systèmes opérationnels"
+
+msgid "Provider unavailable"
+msgstr "Fournisseur indisponible"
