@@ -62,96 +62,207 @@ class SessionManager:
             return f"Good evening! I'm {self.name}, here to help you code! 🌙"
 
 
-def display_welcome_banner(session_name: str):
-    """Display welcome banner with giant colorful rocket ship."""
+def display_welcome_banner(session_name: str, theme: str = "ocean-foam"):
+    """Display welcome banner with clean, professional branding."""
     from rich.text import Text
     from rich.console import Console
+    from rich.panel import Panel
     
     console = Console()
-    logo = Text()
     
-    # Stars border
-    logo.append("\n    ", style="")
-    for color in ["red", "yellow", "green", "cyan", "blue", "magenta"]:
-        logo.append("★", style=f"bold {color}")
-    logo.append(" " * 58, style="")
-    for color in ["magenta", "blue", "cyan", "green", "yellow", "red"]:
-        logo.append("★", style=f"bold {color}")
+    # Theme gradients (hex colors)
+    THEMES = {
+        "synthwave": ("#2193b0", "#6dd5ed"),        # Cyberpunk blue
+        "electric-purple": ("#cc2b5e", "#753a88"),  # Purple energy
+        "neon-aqua": ("#26C0FC", "#61FFFA"),        # Bright cyan
+        "cyber-rose": ("#ED1E79", "#662D8C"),       # Pink purple
+        "toxic-lime": ("#56ab2f", "#a8e063"),       # Green glow
+        "hyper-blue": ("#283AB8", "#16F1FA"),       # Deep to bright blue
+        "blood-moon": ("#ff512f", "#dd2476"),       # Red orange
+        "cosmic-ray": ("#8900ff", "#00ecff"),       # Purple cyan
+        "slate-mist": ("#bdc3c7", "#2c3e50"),       # Professional gray
+        "nordic-ice": ("#93A5CF", "#E4EfE9"),       # Cool blue white
+        "deep-sea": ("#09203F", "#537895"),         # Dark blue
+        "muted-forest": ("#436553", "#A0B4A9"),     # Green gray
+        "soft-steel": ("#868F96", "#596164"),       # Gray tones
+        "pale-wood": ("#eacda3", "#d6ae7b"),        # Warm beige
+        "arctic-frost": ("#000428", "#004e92"),     # Dark to blue
+        "sunburst": ("#ff9966", "#ff5e62"),         # Orange red
+        "morning-sky": ("#ff5f6d", "#ffc371"),      # Pink orange
+        "mango-salsa": ("#FCCF31", "#F55555"),      # Yellow red
+        "ocean-foam": ("#2E3192", "#1BFFFF"),       # Blue cyan
+        "spring-bud": ("#009245", "#FCEE21"),       # Green yellow
+        "emerald-shore": ("#43cea2", "#185a9d"),    # Teal blue
+        "lush-meadow": ("#06beb6", "#48b1bf"),      # Teal gradient
+        "peach-glow": ("#ed4264", "#ffedbc"),       # Coral cream
+        "fire-watch": ("#f45c43", "#eb3349"),       # Red flames
+        "rocket-launch": ("#00ff00", "#ffff00", "#ff0000"),  # Green Yellow Red
+    }
+    
+    # Get theme colors
+    colors = THEMES.get(theme, THEMES["ocean-foam"])
+    
+    # Convert hex to RGB and create gradient
+    def hex_to_rgb(h):
+        h = h.lstrip('#')
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+    
+    def rgb_style(rgb):
+        return f"rgb({rgb[0]},{rgb[1]},{rgb[2]})"
+    
+    # Generate 6 color stops for gradient
+    if len(colors) == 2:
+        start, end = hex_to_rgb(colors[0]), hex_to_rgb(colors[1])
+        gradient = []
+        for i in range(6):
+            factor = i / 5
+            r = int(start[0] + (end[0] - start[0]) * factor)
+            g = int(start[1] + (end[1] - start[1]) * factor)
+            b = int(start[2] + (end[2] - start[2]) * factor)
+            gradient.append((r, g, b))
+    else:  # 3 colors
+        start, mid, end = hex_to_rgb(colors[0]), hex_to_rgb(colors[1]), hex_to_rgb(colors[2])
+        gradient = []
+        for i in range(3):
+            factor = i / 2
+            r = int(start[0] + (mid[0] - start[0]) * factor)
+            g = int(start[1] + (mid[1] - start[1]) * factor)
+            b = int(start[2] + (mid[2] - start[2]) * factor)
+            gradient.append((r, g, b))
+        for i in range(3):
+            factor = i / 2
+            r = int(mid[0] + (end[0] - mid[0]) * factor)
+            g = int(mid[1] + (end[1] - mid[1]) * factor)
+            b = int(mid[2] + (end[2] - mid[2]) * factor)
+            gradient.append((r, g, b))
+    
+    # Clean, modern logo design
+    logo = Text()
+    logo.append("\n")
+    
+    # Rocket emoji at top with padding
+    logo.append("                                  ", style="")
+    logo.append("🚀", style="")
     logo.append("\n\n", style="")
     
-    # Giant Rocket Ship ASCII art
-    rocket_lines = [
-        ("                    ", [("╔═══╗", "bold bright_red on black")]),
-        ("                    ", [("║", "bold bright_red on black"), ("███", "bold bright_yellow on black"), ("║", "bold bright_red on black")]),
-        ("                   ", [("╔", "bold red on black"), ("═", "bold yellow on black"), ("╩", "bold bright_red on black"), ("═", "bold yellow on black"), ("╩", "bold bright_red on black"), ("═", "bold yellow on black"), ("╗", "bold red on black")]),
-        ("                   ", [("║", "bold red on black"), ("█████", "bold bright_cyan on black"), ("║", "bold red on black"), ("   ", ""), ("╔═══════════════════════════════╗", "bold bright_magenta")]),
-        ("                   ", [("║", "bold red on black"), ("█", "bold bright_cyan on black"), ("▓▓▓", "bold cyan on black"), ("█", "bold bright_cyan on black"), ("║", "bold red on black"), ("   ", ""), ("║  ", "bold bright_magenta"), ("R  O  C  K  E  T", "bold bright_cyan"), ("    ", ""), ("C  L  I", "bold bright_yellow"), ("  ║", "bold bright_magenta")]),
-        ("                   ", [("║", "bold red on black"), ("█", "bold bright_cyan on black"), ("███", "bold bright_white on black"), ("█", "bold bright_cyan on black"), ("║", "bold red on black"), ("   ", ""), ("╚═══════════════════════════════╝", "bold bright_magenta")]),
-        ("                   ", [("║", "bold bright_blue on black"), ("█████", "bold bright_white on black"), ("║", "bold bright_blue on black")]),
-        ("                  ", [("╔", "bold blue on black"), ("═", "bold cyan on black"), ("╩", "bold bright_blue on black"), ("═══", "bold white on black"), ("╩", "bold bright_blue on black"), ("═", "bold cyan on black"), ("╗", "bold blue on black")]),
-        ("                  ", [("║", "bold blue on black"), ("███████", "bold bright_white on black"), ("║", "bold blue on black")]),
-        ("                  ", [("║", "bold blue on black"), ("█", "bold bright_white on black"), ("▓▓▓▓▓", "bold white on black"), ("█", "bold bright_white on black"), ("║", "bold blue on black")]),
-        ("                  ", [("║", "bold blue on black"), ("███████", "bold bright_white on black"), ("║", "bold blue on black")]),
-        ("                  ", [("╠", "bold bright_green on black"), ("═══════", "bold green on black"), ("╣", "bold bright_green on black")]),
-        ("                  ", [("║", "bold green on black"), ("███████", "bold bright_green on black"), ("║", "bold green on black")]),
-        ("                  ", [("║", "bold green on black"), ("███████", "bold bright_green on black"), ("║", "bold green on black")]),
-        ("                  ", [("╠", "bold bright_yellow on black"), ("═══════", "bold yellow on black"), ("╣", "bold bright_yellow on black")]),
-        ("                  ", [("║", "bold yellow on black"), ("███████", "bold bright_yellow on black"), ("║", "bold yellow on black")]),
-        ("                  ", [("║", "bold yellow on black"), ("███████", "bold bright_yellow on black"), ("║", "bold yellow on black")]),
-        ("                  ", [("╚", "bold bright_yellow on black"), ("═══════", "bold yellow on black"), ("╝", "bold bright_yellow on black")]),
-        ("                 ", [("╔", "bold red on black"), ("═", "bold bright_red on black"), ("╝", "bold bright_yellow on black"), ("     ", ""), ("╚", "bold bright_yellow on black"), ("═", "bold bright_red on black"), ("╗", "bold red on black")]),
-        ("                ", [("╔", "bold bright_red on black"), ("╝", "bold bright_yellow on black"), ("         ", ""), ("╚", "bold bright_yellow on black"), ("╗", "bold bright_red on black")]),
-        ("               ", [("║", "bold bright_red on black"), ("🔥", ""), ("         ", ""), ("🔥", ""), ("║", "bold bright_red on black")]),
-        ("               ", [("╚", "bold bright_yellow on black"), ("═══════════", "bold bright_red on black"), ("╝", "bold bright_yellow on black")]),
-    ]
+    # Top border
+    logo.append("    ╔", style=rgb_style(gradient[0]))
+    logo.append("═" * 68, style=rgb_style(gradient[1]))
+    logo.append("╗\n", style=rgb_style(gradient[2]))
     
-    for prefix, parts in rocket_lines:
-        logo.append(prefix, style="")
-        for text, style in parts:
-            logo.append(text, style=style)
-        logo.append("\n", style="")
+    # Main ROCKET logo with gradient
+    logo.append("    ║", style=rgb_style(gradient[0]))
+    logo.append("                                                                    ", style="")
+    logo.append("║\n", style=rgb_style(gradient[0]))
+    
+    logo.append("    ║        ", style=rgb_style(gradient[0]))
+    logo.append("██████╗  ", style=f"bold {rgb_style(gradient[0])} on black")
+    logo.append("  ██████╗  ", style=f"bold {rgb_style(gradient[1])} on black")
+    logo.append("  ██████╗ ", style=f"bold {rgb_style(gradient[2])} on black")
+    logo.append(" ██╗  ██╗", style=f"bold {rgb_style(gradient[3])} on black")
+    logo.append(" ███████╗", style=f"bold {rgb_style(gradient[4])} on black")
+    logo.append(" ████████╗", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append("   ", style="")
+    logo.append("║\n", style=rgb_style(gradient[1]))
+    
+    logo.append("    ║        ", style=rgb_style(gradient[1]))
+    logo.append("██╔══██╗ ", style=f"bold {rgb_style(gradient[0])} on black")
+    logo.append(" ██╔═══██╗", style=f"bold {rgb_style(gradient[1])} on black")
+    logo.append(" ██╔════╝", style=f"bold {rgb_style(gradient[2])} on black")
+    logo.append(" ██║ ██╔╝", style=f"bold {rgb_style(gradient[3])} on black")
+    logo.append(" ██╔════╝", style=f"bold {rgb_style(gradient[4])} on black")
+    logo.append(" ╚══██╔══╝", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append("   ", style="")
+    logo.append("║\n", style=rgb_style(gradient[2]))
+    
+    logo.append("    ║        ", style=rgb_style(gradient[2]))
+    logo.append("██████╔╝ ", style=f"bold {rgb_style(gradient[0])} on black")
+    logo.append(" ██║   ██║", style=f"bold {rgb_style(gradient[1])} on black")
+    logo.append(" ██║     ", style=f"bold {rgb_style(gradient[2])} on black")
+    logo.append(" █████╔╝ ", style=f"bold {rgb_style(gradient[3])} on black")
+    logo.append(" █████╗  ", style=f"bold {rgb_style(gradient[4])} on black")
+    logo.append("    ██║   ", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append("   ", style="")
+    logo.append("║\n", style=rgb_style(gradient[3]))
+    
+    logo.append("    ║        ", style=rgb_style(gradient[3]))
+    logo.append("██╔══██╗ ", style=f"bold {rgb_style(gradient[0])} on black")
+    logo.append(" ██║   ██║", style=f"bold {rgb_style(gradient[2])} on black")
+    logo.append(" ██║     ", style=f"bold {rgb_style(gradient[2])} on black")
+    logo.append(" ██╔═██╗ ", style=f"bold {rgb_style(gradient[3])} on black")
+    logo.append(" ██╔══╝  ", style=f"bold {rgb_style(gradient[4])} on black")
+    logo.append("    ██║   ", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append("   ", style="")
+    logo.append("║\n", style=rgb_style(gradient[4]))
+    
+    logo.append("    ║        ", style=rgb_style(gradient[4]))
+    logo.append("██║  ██║ ", style=f"bold {rgb_style(gradient[1])} on black")
+    logo.append(" ╚██████╔╝", style=f"bold {rgb_style(gradient[2])} on black")
+    logo.append(" ╚██████╗", style=f"bold {rgb_style(gradient[3])} on black")
+    logo.append(" ██║  ██╗", style=f"bold {rgb_style(gradient[4])} on black")
+    logo.append(" ███████╗", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append("    ██║   ", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append("   ", style="")
+    logo.append("║\n", style=rgb_style(gradient[5]))
+    
+    logo.append("    ║        ", style=rgb_style(gradient[5]))
+    logo.append("╚═╝  ╚═╝ ", style=f"bold {rgb_style(gradient[2])} on black")
+    logo.append("  ╚═════╝ ", style=f"bold {rgb_style(gradient[3])} on black")
+    logo.append("  ╚═════╝", style=f"bold {rgb_style(gradient[4])} on black")
+    logo.append(" ╚═╝  ╚═╝", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append(" ╚══════╝", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append("    ╚═╝   ", style=f"bold {rgb_style(gradient[5])} on black")
+    logo.append("   ", style="")
+    logo.append("║\n", style=rgb_style(gradient[5]))
+    
+    logo.append("    ║", style=rgb_style(gradient[5]))
+    logo.append("                                                                    ", style="")
+    logo.append("║\n", style=rgb_style(gradient[5]))
     
     # Subtitle
-    logo.append("\n              🚀 ", style="")
-    logo.append("AI-Powered Coding Assistant", style="bold bright_cyan")
-    logo.append(" 🚀\n", style="")
-    logo.append("                ", style="")
-    logo.append("Your Personal Development Partner", style="cyan italic")
-    logo.append("\n\n    ", style="")
+    logo.append("    ║              ", style=rgb_style(gradient[5]))
+    logo.append("🚀  ", style="")
+    logo.append("AI-Powered Coding Assistant", style=f"bold {rgb_style(gradient[3])}")
+    logo.append("  🚀", style="")
+    logo.append("              ║\n", style=rgb_style(gradient[5]))
     
-    # Bottom stars
-    for color in ["red", "yellow", "green", "cyan", "blue", "magenta"]:
-        logo.append("★", style=f"bold {color}")
-    logo.append(" " * 58, style="")
-    for color in ["magenta", "blue", "cyan", "green", "yellow", "red"]:
-        logo.append("★", style=f"bold {color}")
-    logo.append("\n", style="")
+    logo.append("    ║                  ", style=rgb_style(gradient[5]))
+    logo.append("Your Personal Development Partner", style=f"{rgb_style(gradient[2])} italic")
+    logo.append("                  ║\n", style=rgb_style(gradient[5]))
+    
+    logo.append("    ║", style=rgb_style(gradient[5]))
+    logo.append("                                                                    ", style="")
+    logo.append("║\n", style=rgb_style(gradient[5]))
+    
+    # Bottom border
+    logo.append("    ╚", style=rgb_style(gradient[5]))
+    logo.append("═" * 68, style=rgb_style(gradient[3]))
+    logo.append("╝\n", style=rgb_style(gradient[0]))
     
     console.print(logo)
-    console.print()
     
-    # Session info
+    # Session info with gradient colors
     session = SessionManager(name=session_name)
     greeting = Text()
-    greeting.append("\n              ╭", style="bold cyan")
-    greeting.append("─" * 48, style="bold magenta")
-    greeting.append("╮\n", style="bold cyan")
-    greeting.append("              │  🎉 ", style="bold cyan")
-    greeting.append(session.get_greeting(), style="bold green")
-    greeting.append("  │\n", style="bold magenta")
-    greeting.append("              │  💼 Session: ", style="bold magenta")
-    greeting.append(session_name, style="bold bright_cyan on black")
+    greeting.append("\n              ╭", style=rgb_style(gradient[0]))
+    greeting.append("─" * 48, style=rgb_style(gradient[2]))
+    greeting.append("╮\n", style=rgb_style(gradient[4]))
+    greeting.append("              │  🎉 ", style=rgb_style(gradient[0]))
+    greeting.append(session.get_greeting(), style=f"bold {rgb_style(gradient[3])}")
+    greeting.append("  │\n", style=rgb_style(gradient[2]))
+    greeting.append("              │  💼 Session: ", style=rgb_style(gradient[2]))
+    greeting.append(session_name, style=f"bold {rgb_style(gradient[1])} on black")
     greeting.append("  │  ⚡ ", style="")
-    greeting.append("Ollama", style="bold bright_yellow on black")
+    greeting.append("Ollama", style=f"bold {rgb_style(gradient[3])} on black")
     greeting.append("  │  🎯 ", style="")
-    greeting.append("Ready!", style="bold bright_green on black")
-    greeting.append("  │\n", style="bold yellow")
-    greeting.append("              │  💡 Type ", style="bold yellow")
-    greeting.append("help", style="bold bright_magenta on black")
-    greeting.append(" or just chat! ✨🌈           │\n", style="white")
-    greeting.append("              ╰", style="bold green")
-    greeting.append("─" * 48, style="bold blue")
-    greeting.append("╯\n", style="bold green")
+    greeting.append("Ready!", style=f"bold {rgb_style(gradient[4])} on black")
+    greeting.append("  │\n", style=rgb_style(gradient[4]))
+    greeting.append("              │  💡 Type ", style=rgb_style(gradient[5]))
+    greeting.append("help", style=f"bold {rgb_style(gradient[3])} on black")
+    greeting.append(" or just chat! ✨           │\n", style="white")
+    greeting.append("              ╰", style=rgb_style(gradient[5]))
+    greeting.append("─" * 48, style=rgb_style(gradient[3]))
+    greeting.append("╯\n", style=rgb_style(gradient[0]))
     
     console.print(greeting)
     console.print()
@@ -345,7 +456,7 @@ async def run_interactive_shell(session_name: Optional[str] = None):
     
     # Display welcome
     console.clear()
-    session = display_welcome_banner(session_name)
+    session = display_welcome_banner(session_name, theme="ocean-foam")
     
     # Get provider manager (initialize once)
     try:
