@@ -130,6 +130,7 @@ class RocketConfig:
             ollama_url=self.ollama_url,
             ollama_model=self.ollama_model,
             community_proxy_url=self.community_proxy_url,
+            default_model=self.default_model,
             prefer_local=self.prefer_local,
         )
 

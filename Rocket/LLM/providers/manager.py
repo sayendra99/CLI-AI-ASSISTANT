@@ -77,6 +77,7 @@ class ManagerConfig:
     ollama_url: Optional[str] = None
     ollama_model: str = "llama3.2"
     community_proxy_url: Optional[str] = None
+    default_model: str = "gemini-1.5-flash"  # Gemini model to use
     
     # Behavior settings
     enable_fallback: bool = True
@@ -142,7 +143,10 @@ class ProviderManager:
         # 1. BYOK Gemini (highest priority if configured)
         if self.config.gemini_api_key:
             providers_to_check.append(
-                GeminiProvider(api_key=self.config.gemini_api_key)
+                GeminiProvider(
+                    api_key=self.config.gemini_api_key,
+                    model=self.config.default_model
+                )
             )
         
         # 2. Community proxy (authenticated or anonymous)
