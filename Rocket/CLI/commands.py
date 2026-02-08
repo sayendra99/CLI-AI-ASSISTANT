@@ -16,6 +16,10 @@ from typing import Optional, Dict, Any, Set
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.table import Table
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich import box
+from rich.text import Text
 
 from Rocket.LLM import GeminiClient
 from Rocket.LLM.providers import (
@@ -65,7 +69,7 @@ def _get_cached_config() -> Any:
     """
     return load_config()
 
-                                                                                                                                                                                                                                                                
+
 async def _cleanup_manager(manager: ProviderManager) -> None:
     """
     Cleanup provider manager sessions.
@@ -222,16 +226,22 @@ async def handle_chat(message: str, stream: bool = False) -> None:
     """
     manager = None
     try:
-        console.print(f"\n[cyan]🚀 Rocket:[/cyan]", end=" ")
+        # Beautiful header
+        header = Text()
+        header.append("\n💬 ", style="")
+        header.append("Rocket AI", style="bold cyan")
+        header.append(" is ready to help!\n", style="green")
+        console.print(header)
         
         # Get provider manager (with fallback support)
         manager = await get_provider_manager()
         
         system_instruction = (
-            "You are Rocket, an expert AI coding assistant. "
+            "You are Rocket, an enthusiastic and expert AI coding assistant. "
             "Help developers with code generation, debugging, optimization, and explanations. "
-            "Provide practical, production-ready solutions. "
-            "When showing code, use proper markdown formatting with language identifiers."
+            "Provide practical, production-ready solutions with clear examples. "
+            "When showing code, use proper markdown formatting with language identifiers. "
+            "Be friendly, encouraging, and use emojis occasionally."
         )
         
         options = GenerateOptions(
@@ -244,13 +254,25 @@ async def handle_chat(message: str, stream: bool = False) -> None:
         
         if stream:
             # Stream response
+            console.print()
             async for chunk in manager.generate_stream(options):
                 console.print(chunk, end="", highlight=False)
-            console.print()  # New line at end
+            console.print("\n")
         else:
             # Get full response
             response = await manager.generate(options)
-            console.print(Markdown(response.text))
+            
+            # Display in beautiful panel
+            md = Markdown(response.text)
+            console.print()
+            console.print(Panel(
+                md,
+                title="[bold cyan]🚀 Rocket Response[/bold cyan]",
+                border_style="cyan",
+                box=box.ROUNDED,
+                padding=(1, 2)
+            ))
+            console.print()
         
         # Cleanup sessions
         await _cleanup_manager(manager)

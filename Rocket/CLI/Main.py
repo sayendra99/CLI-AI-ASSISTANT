@@ -363,10 +363,58 @@ def whoami():
         raise typer.Exit(1)
 
 
+@app.command("shell")
+def shell(
+    name: Optional[str] = typer.Option(None, "--name", "-n", help="Custom session name (e.g., 'Dollar', 'DevBot')")
+):
+    """
+    🚀 Start interactive shell mode with personalized AI assistant.
+    
+    Features:
+    • Natural conversation - just type and chat!
+    • Session personalization - name your assistant
+    • Command shortcuts - /generate, /explain, /debug
+    • Beautiful formatting - syntax highlighting & markdown
+    • Conversation history - review past messages
+    • Easy to use - type 'help' anytime
+    
+    Examples:
+        rocket shell
+        rocket shell --name Dollar
+        rocket shell -n DevBot
+    
+    Interactive Commands:
+        help         - Show all available commands
+        /generate    - Generate code snippets
+        /explain     - Explain code concepts  
+        /debug       - Debug errors
+        /code        - Display code files with highlighting
+        /clear       - Clear screen
+        /history     - View conversation history
+        /rename      - Change session name
+        /exit        - Exit interactive mode
+    """
+    try:
+        from Rocket.CLI.interactive import start_interactive_mode
+        
+        # Start interactive shell
+        start_interactive_mode(session_name=name)
+        
+    except Exception as e:
+        console.print(f"[red]❌ Error in shell mode: {str(e)}[/red]")
+        logger.exception("Shell mode failed")
+        raise typer.Exit(1)
+
+
 def main():
     """Main entry point for Rocket CLI."""
     try:
-        app()
+        # If no command provided, start interactive shell by default
+        if len(sys.argv) == 1:
+            from Rocket.CLI.interactive import start_interactive_mode
+            start_interactive_mode()
+        else:
+            app()
     except KeyboardInterrupt:
         console.print("\n[yellow]⚠️  Rocket CLI interrupted by user[/yellow]")
         sys.exit(0)
