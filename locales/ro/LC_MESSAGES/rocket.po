@@ -1,0 +1,94 @@
+# Romanian (Română) translations for Rocket CLI
+# This file contains common CLI messages translated to Romanian
+
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ro\n"
+
+# General messages
+msgid "Hello, World!"
+msgstr "Salut, Lume!"
+
+msgid "Welcome to Rocket CLI"
+msgstr "Bun venit la Rocket CLI"
+
+msgid "Error"
+msgstr "Eroare"
+
+msgid "Success"
+msgstr "Succes"
+
+msgid "Warning"
+msgstr "Avertisment"
+
+# Command descriptions
+msgid "Chat with Rocket AI Assistant for coding solutions."
+msgstr "Discută cu Asistentul AI Rocket pentru soluții de programare."
+
+msgid "Generate code snippets using Rocket AI Assistant."
+msgstr "Generează fragmente de cod folosind Asistentul AI Rocket."
+
+msgid "Explain code from a file or snippet."
+msgstr "Explică codul dintr-un fișier sau fragment."
+
+msgid "Debug errors and issues in your code."
+msgstr "Depanează erori și probleme în codul tău."
+
+msgid "Optimize code for performance, readability, or security."
+msgstr "Optimizează codul pentru performanță, lizibilitate sau securitate."
+
+# Common operations
+msgid "Loading configuration..."
+msgstr "Se încarcă configurația..."
+
+msgid "File not found"
+msgstr "Fișier negăsit"
+
+msgid "Invalid input"
+msgstr "Intrare invalidă"
+
+msgid "Operation completed successfully"
+msgstr "Operațiune finalizată cu succes"
+
+msgid "Authentication required"
+msgstr "Autentificare necesară"
+
+msgid "Logged in successfully"
+msgstr "Autentificare reușită"
+
+msgid "Logged out successfully"
+msgstr "Deconectare reușită"
+
+# File operations
+msgid "Reading file: {filename}"
+msgstr "Se citește fișierul: {filename}"
+
+msgid "Writing file: {filename}"
+msgstr "Se scrie fișierul: {filename}"
+
+msgid "File saved successfully"
+msgstr "Fișier salvat cu succes"
+
+# Error messages
+msgid "Connection error"
+msgstr "Eroare de conexiune"
+
+msgid "Rate limit exceeded"
+msgstr "Limită de frecvență depășită"
+
+msgid "Invalid API key"
+msgstr "Cheie API invalidă"
+
+msgid "Timeout error"
+msgstr "Eroare de timeout"
+
+# Status messages
+msgid "Checking provider status..."
+msgstr "Se verifică starea furnizorului..."
+
+msgid "All systems operational"
+msgstr "Toate sistemele sunt operaționale"
+
+msgid "Provider unavailable"
+msgstr "Furnizor indisponibil"

@@ -1,0 +1,94 @@
+# German (Deutsch) translations for Rocket CLI
+# This file contains common CLI messages translated to German
+
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de\n"
+
+# General messages
+msgid "Hello, World!"
+msgstr "Hallo, Welt!"
+
+msgid "Welcome to Rocket CLI"
+msgstr "Willkommen bei Rocket CLI"
+
+msgid "Error"
+msgstr "Fehler"
+
+msgid "Success"
+msgstr "Erfolg"
+
+msgid "Warning"
+msgstr "Warnung"
+
+# Command descriptions
+msgid "Chat with Rocket AI Assistant for coding solutions."
+msgstr "Chatten Sie mit dem Rocket KI-Assistenten für Programmierlösungen."
+
+msgid "Generate code snippets using Rocket AI Assistant."
+msgstr "Generieren Sie Code-Snippets mit dem Rocket KI-Assistenten."
+
+msgid "Explain code from a file or snippet."
+msgstr "Erklären Sie Code aus einer Datei oder einem Snippet."
+
+msgid "Debug errors and issues in your code."
+msgstr "Debuggen Sie Fehler und Probleme in Ihrem Code."
+
+msgid "Optimize code for performance, readability, or security."
+msgstr "Optimieren Sie Code für Leistung, Lesbarkeit oder Sicherheit."
+
+# Common operations
+msgid "Loading configuration..."
+msgstr "Konfiguration wird geladen..."
+
+msgid "File not found"
+msgstr "Datei nicht gefunden"
+
+msgid "Invalid input"
+msgstr "Ungültige Eingabe"
+
+msgid "Operation completed successfully"
+msgstr "Vorgang erfolgreich abgeschlossen"
+
+msgid "Authentication required"
+msgstr "Authentifizierung erforderlich"
+
+msgid "Logged in successfully"
+msgstr "Erfolgreich angemeldet"
+
+msgid "Logged out successfully"
+msgstr "Erfolgreich abgemeldet"
+
+# File operations
+msgid "Reading file: {filename}"
+msgstr "Datei wird gelesen: {filename}"
+
+msgid "Writing file: {filename}"
+msgstr "Datei wird geschrieben: {filename}"
+
+msgid "File saved successfully"
+msgstr "Datei erfolgreich gespeichert"
+
+# Error messages
+msgid "Connection error"
+msgstr "Verbindungsfehler"
+
+msgid "Rate limit exceeded"
+msgstr "Ratenbegrenzung überschritten"
+
+msgid "Invalid API key"
+msgstr "Ungültiger API-Schlüssel"
+
+msgid "Timeout error"
+msgstr "Zeitüberschreitungsfehler"
+
+# Status messages
+msgid "Checking provider status..."
+msgstr "Anbieterstatus wird überprüft..."
+
+msgid "All systems operational"
+msgstr "Alle Systeme betriebsbereit"
+
+msgid "Provider unavailable"
+msgstr "Anbieter nicht verfügbar"

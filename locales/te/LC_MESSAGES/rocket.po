@@ -1,0 +1,94 @@
+# Telugu (తెలుగు) translations for Rocket CLI
+# This file contains common CLI messages translated to Telugu
+
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: te\n"
+
+# General messages
+msgid "Hello, World!"
+msgstr "హలో, ప్రపంచం!"
+
+msgid "Welcome to Rocket CLI"
+msgstr "రాకెట్ CLI కి స్వాగతం"
+
+msgid "Error"
+msgstr "లోపం"
+
+msgid "Success"
+msgstr "విజయం"
+
+msgid "Warning"
+msgstr "హెచ్చరిక"
+
+# Command descriptions
+msgid "Chat with Rocket AI Assistant for coding solutions."
+msgstr "కోడింగ్ పరిష్కారాల కోసం రాకెట్ AI అసిస్టెంట్‌తో చాట్ చేయండి."
+
+msgid "Generate code snippets using Rocket AI Assistant."
+msgstr "రాకెట్ AI అసిస్టెంట్ ఉపయోగించి కోడ్ స్నిప్పెట్‌లను రూపొందించండి."
+
+msgid "Explain code from a file or snippet."
+msgstr "ఫైల్ లేదా స్నిప్పెట్ నుండి కోడ్‌ను వివరించండి."
+
+msgid "Debug errors and issues in your code."
+msgstr "మీ కోడ్‌లో లోపాలను మరియు సమస్యలను డీబగ్ చేయండి."
+
+msgid "Optimize code for performance, readability, or security."
+msgstr "పనితీరు, చదవడానికి సులభత లేదా భద్రత కోసం కోడ్‌ను ఆప్టిమైజ్ చేయండి."
+
+# Common operations
+msgid "Loading configuration..."
+msgstr "కాన్ఫిగరేషన్ లోడ్ అవుతోంది..."
+
+msgid "File not found"
+msgstr "ఫైల్ కనుగొనబడలేదు"
+
+msgid "Invalid input"
+msgstr "చెల్లని ఇన్‌పుట్"
+
+msgid "Operation completed successfully"
+msgstr "ఆపరేషన్ విజయవంతంగా పూర్తయింది"
+
+msgid "Authentication required"
+msgstr "ప్రమాణీకరణ అవసరం"
+
+msgid "Logged in successfully"
+msgstr "విజయవంతంగా లాగిన్ అయ్యారు"
+
+msgid "Logged out successfully"
+msgstr "విజయవంతంగా లాగౌట్ అయ్యారు"
+
+# File operations
+msgid "Reading file: {filename}"
+msgstr "ఫైల్ చదవబడుతోంది: {filename}"
+
+msgid "Writing file: {filename}"
+msgstr "ఫైల్ వ్రాయబడుతోంది: {filename}"
+
+msgid "File saved successfully"
+msgstr "ఫైల్ విజయవంతంగా సేవ్ చేయబడింది"
+
+# Error messages
+msgid "Connection error"
+msgstr "కనెక్షన్ లోపం"
+
+msgid "Rate limit exceeded"
+msgstr "రేటు పరిమితి మించిపోయింది"
+
+msgid "Invalid API key"
+msgstr "చెల్లని API కీ"
+
+msgid "Timeout error"
+msgstr "టైమౌట్ లోపం"
+
+# Status messages
+msgid "Checking provider status..."
+msgstr "ప్రొవైడర్ స్థితి తనిఖీ చేయబడుతోంది..."
+
+msgid "All systems operational"
+msgstr "అన్ని సిస్టమ్‌లు పనిచేస్తున్నాయి"
+
+msgid "Provider unavailable"
+msgstr "ప్రొవైడర్ అందుబాటులో లేదు"

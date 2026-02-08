@@ -1,0 +1,94 @@
+# Tamil (தமிழ்) translations for Rocket CLI
+# This file contains common CLI messages translated to Tamil
+
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ta\n"
+
+# General messages
+msgid "Hello, World!"
+msgstr "வணக்கம், உலகம்!"
+
+msgid "Welcome to Rocket CLI"
+msgstr "ராக்கெட் CLI-க்கு வரவேற்கிறோம்"
+
+msgid "Error"
+msgstr "பிழை"
+
+msgid "Success"
+msgstr "வெற்றி"
+
+msgid "Warning"
+msgstr "எச்சரிக்கை"
+
+# Command descriptions
+msgid "Chat with Rocket AI Assistant for coding solutions."
+msgstr "குறியீட்டு தீர்வுகளுக்கு ராக்கெட் AI உதவியாளருடன் அரட்டை அடியுங்கள்."
+
+msgid "Generate code snippets using Rocket AI Assistant."
+msgstr "ராக்கெட் AI உதவியாளரைப் பயன்படுத்தி குறியீடு துணுக்குகளை உருவாக்கவும்."
+
+msgid "Explain code from a file or snippet."
+msgstr "கோப்பு அல்லது துணுக்கிலிருந்து குறியீட்டை விளக்கவும்."
+
+msgid "Debug errors and issues in your code."
+msgstr "உங்கள் குறியீட்டில் பிழைகள் மற்றும் சிக்கல்களைத் திருத்தவும்."
+
+msgid "Optimize code for performance, readability, or security."
+msgstr "செயல்திறன், படிக்கும் தன்மை அல்லது பாதுகாப்புக்கு குறியீட்டை மேம்படுத்தவும்."
+
+# Common operations
+msgid "Loading configuration..."
+msgstr "உள்ளமைவு ஏற்றப்படுகிறது..."
+
+msgid "File not found"
+msgstr "கோப்பு கிடைக்கவில்லை"
+
+msgid "Invalid input"
+msgstr "தவறான உள்ளீடு"
+
+msgid "Operation completed successfully"
+msgstr "செயல்பாடு வெற்றிகரமாக முடிந்தது"
+
+msgid "Authentication required"
+msgstr "அங்கீகாரம் தேவை"
+
+msgid "Logged in successfully"
+msgstr "வெற்றிகரமாக உள்நுழைந்தீர்கள்"
+
+msgid "Logged out successfully"
+msgstr "வெற்றிகரமாக வெளியேறினீர்கள்"
+
+# File operations
+msgid "Reading file: {filename}"
+msgstr "கோப்பு படிக்கப்படுகிறது: {filename}"
+
+msgid "Writing file: {filename}"
+msgstr "கோப்பு எழுதப்படுகிறது: {filename}"
+
+msgid "File saved successfully"
+msgstr "கோப்பு வெற்றிகரமாக சேமிக்கப்பட்டது"
+
+# Error messages
+msgid "Connection error"
+msgstr "இணைப்புப் பிழை"
+
+msgid "Rate limit exceeded"
+msgstr "வீத வரம்பு மீறப்பட்டது"
+
+msgid "Invalid API key"
+msgstr "தவறான API விசை"
+
+msgid "Timeout error"
+msgstr "நேர முடிவு பிழை"
+
+# Status messages
+msgid "Checking provider status..."
+msgstr "வழங்குநர் நிலை சரிபார்க்கப்படுகிறது..."
+
+msgid "All systems operational"
+msgstr "அனைத்து அமைப்புகளும் செயல்படுகின்றன"
+
+msgid "Provider unavailable"
+msgstr "வழங்குநர் கிடைக்கவில்லை"
