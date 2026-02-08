@@ -12,6 +12,12 @@ Features:
     - Path traversal prevention
     - Workspace containment verification
 
+Performance Optimizations:
+    - Buffered I/O operations
+    - Efficient diff generation
+    - Atomic file operations to prevent corruption
+    - Memory-efficient temp file handling
+
 Author: Rocket AI Team
 """
 
@@ -26,6 +32,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, List, Tuple, Literal
+from functools import lru_cache
 
 # Handle imports for both package usage and direct execution
 def _setup_path() -> None:

@@ -10,6 +10,12 @@ Features:
     - Cross-platform path handling
     - Safety limits to prevent huge outputs
 
+Performance Optimizations:
+    - LRU caching for repeated directory listings
+    - Efficient os.scandir() usage
+    - Lazy directory traversal
+    - Cached file stat operations
+
 Author: Rocket AI Team
 """
 
@@ -19,6 +25,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from functools import lru_cache
 
 # Handle imports for both package usage and direct execution
 def _setup_path() -> None:

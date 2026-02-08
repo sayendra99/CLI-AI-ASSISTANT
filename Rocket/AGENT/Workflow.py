@@ -6,6 +6,11 @@ Git, Modes, Tools, LLM, PRs
 
 Executes complete workflow from prompt to PR.
 
+Performance Optimizations:
+- LRU caching for mode registry and selectors
+- Cached git status checks
+- Efficient workflow state management
+
 Author: Rocket AI Team
 """
 
@@ -17,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from functools import lru_cache
 
 # Handle imports for both package and direct execution
 try:

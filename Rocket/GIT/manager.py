@@ -1,10 +1,17 @@
 """ Git operations manager.
-handles all git interactions: branching, committing , status checks."""
+handles all git interactions: branching, committing , status checks.
+
+Performance Optimizations:
+- LRU caching for git status checks
+- Cached branch existence lookups
+- Efficient subprocess operations
+"""
 
 import subprocess
 from typing import Optional,List
 from pathlib import Path
 from dataclasses import dataclass
+from functools import lru_cache
 from Rocket.Utils.Log import get_logger
 logger = get_logger(__name__)
 
@@ -262,8 +269,12 @@ class GitManager:
     
     # Private helper methods
     
+    @lru_cache(maxsize=1)
     def _is_git_repo(self) -> bool:
-        """Check if current directory is a git repository."""
+        """Check if current directory is a git repository.
+        
+        Cached to avoid repeated filesystem checks.
+        """
         try:
             subprocess.run(
                 ['git', 'rev-parse', '--git-dir'],
@@ -277,8 +288,12 @@ class GitManager:
         except subprocess.CalledProcessError:
             return False
     
+    @lru_cache(maxsize=8)
     def _get_current_branch(self) -> str:
-        """Get current branch name."""
+        """Get current branch name.
+        
+        Cached to reduce git subprocess calls.
+        """
         try:
             result = subprocess.run(
                 ['git', 'branch', '--show-current'],
@@ -329,8 +344,12 @@ class GitManager:
         except subprocess.CalledProcessError:
             return []
     
+    @lru_cache(maxsize=64)
     def _branch_exists(self, branch_name: str) -> bool:
-        """Check if branch exists."""
+        """Check if branch exists.
+        
+        Cached to avoid repeated git lookups.
+        """
         try:
             # Use list elements to prevent string interpolation issues
             ref_path = 'refs/heads/' + branch_name

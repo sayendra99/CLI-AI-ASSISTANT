@@ -2,9 +2,15 @@
 Mode registry for managing available modes.
 
 Centralized registry pattern for mode management.
+
+Performance Optimizations:
+- LRU caching for mode lookups
+- Efficient dictionary access
+- Cached mode lists
 """
 
 from typing import Dict, List, Optional
+from functools import lru_cache
 
 from Rocket.MODES.Base import BaseMode
 from Rocket.Utils.Log import get_logger
@@ -47,9 +53,12 @@ class ModeRegistry:
         self._modes[mode_name] = mode
         logger.info(f"Registered mode: {mode_name}")
     
+    @lru_cache(maxsize=16)
     def get(self, mode_name: str) -> Optional[BaseMode]:
         """
         Get a mode by name.
+        
+        Cached to avoid repeated dictionary lookups.
         
         Args:
             mode_name: Name of mode to retrieve
@@ -66,9 +75,12 @@ class ModeRegistry:
         
         return mode
     
+    @lru_cache(maxsize=16)
     def get_or_default(self, mode_name: str, default: str = "READ") -> BaseMode:
         """
         Get mode by name, or return default if not found.
+        
+        Cached for performance.
         
         Args:
             mode_name: Name of mode to retrieve
@@ -91,9 +103,12 @@ class ModeRegistry:
         logger.warning(f"Mode '{mode_name}' not found, using default: {default}")
         return default_mode
     
+    @lru_cache(maxsize=1)
     def list_all(self) -> List[BaseMode]:
         """
         Get list of all registered modes.
+        
+        Cached to avoid repeated list creation.
         
         Returns:
             List of mode instances

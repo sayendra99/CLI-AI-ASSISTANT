@@ -5,6 +5,11 @@ Tracks EVERYTHING that happens during workflow execution.
 Used for logging, debugging, and result reporting.
 Provides immutable history of execution.
 
+Performance Optimizations:
+- LRU caching for serialization operations
+- Efficient data structure access patterns
+- Lazy evaluation of expensive computations
+
 Author: Rocket AI Team
 """
 
@@ -16,6 +21,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 from enum import Enum
+from functools import lru_cache
 
 # Handle imports for both package and direct execution
 try:

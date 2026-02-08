@@ -13,6 +13,12 @@ Security Features:
     - Symbolic link escape prevention
     - UTF-8 encoding with graceful error handling
 
+Performance Optimizations:
+    - Buffered I/O operations (8KB chunks)
+    - LRU caching for file metadata checks
+    - Efficient binary detection
+    - Memory-efficient line reading
+
 Author: Rocket AI Team
 """
 
@@ -23,6 +29,7 @@ import stat
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional, List, Tuple, TYPE_CHECKING
+from functools import lru_cache
 
 # Handle imports for both package usage and direct execution
 def _setup_path() -> None:

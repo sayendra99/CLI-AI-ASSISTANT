@@ -4,6 +4,11 @@ Tool executor with mode-based permission checks.
 Wraps tool execution to enforce mode restrictions.
 Tracks all tool executions in context.
 
+Performance Optimizations:
+- LRU caching for tool registry lookups
+- Cached permission checks
+- Efficient tool resolution
+
 Author: Rocket AI Team
 """
 
@@ -12,6 +17,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from functools import lru_cache
 
 # Handle imports for both package and direct execution
 try:
@@ -140,9 +146,12 @@ class ToolExecutor:
     # Permission Checks
     # -------------------------------------------------------------------------
     
+    @lru_cache(maxsize=128)
     def is_tool_allowed(self, tool_name: str) -> bool:
         """
         Check if a tool is allowed by the current mode.
+        
+        Uses LRU cache to avoid repeated permission checks for same tool.
         
         Args:
             tool_name: Name of the tool to check
@@ -173,9 +182,12 @@ class ToolExecutor:
     # Tool Discovery
     # -------------------------------------------------------------------------
     
+    @lru_cache(maxsize=1)
     def get_available_tools(self) -> List[BaseTool]:
         """
         Get tools available in the current mode.
+        
+        Cached to avoid repeated registry lookups.
         
         Returns:
             List of tools allowed by the current mode
@@ -188,18 +200,24 @@ class ToolExecutor:
         logger.debug(f"Available tools for {self.mode_name}: {len(available)}")
         return available
     
+    @lru_cache(maxsize=1)
     def get_available_tool_names(self) -> List[str]:
         """
         Get names of tools available in the current mode.
+        
+        Cached for performance.
         
         Returns:
             List of tool names allowed by current mode
         """
         return [tool.name for tool in self.get_available_tools()]
     
+    @lru_cache(maxsize=64)
     def get_tool(self, tool_name: str) -> Optional[BaseTool]:
         """
         Get a tool by name if it exists and is allowed.
+        
+        Cached to avoid repeated registry lookups.
         
         Args:
             tool_name: Name of the tool

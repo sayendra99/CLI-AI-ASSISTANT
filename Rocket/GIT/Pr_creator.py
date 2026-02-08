@@ -1,6 +1,16 @@
+"""
+Pull Request Creator for GitHub
+
+Performance Optimizations:
+- Cached GitHub CLI availability check
+- Efficient subprocess operations
+- Minimal API calls
+"""
+
 import subprocess
 from typing import Optional
 from dataclasses import dataclass
+from functools import lru_cache
 
 from Rocket.Utils.Log import get_logger
 
@@ -36,8 +46,12 @@ class PRCreator:
         """Initialize PR creator."""
         self.has_gh_cli = self._check_gh_cli()
     
+    @lru_cache(maxsize=1)
     def _check_gh_cli(self) -> bool:
-        """Check if GitHub CLI is installed."""
+        """Check if GitHub CLI is installed.
+        
+        Cached to avoid repeated subprocess calls.
+        """
         try:
             subprocess.run(
                 ['gh', '--version'],
