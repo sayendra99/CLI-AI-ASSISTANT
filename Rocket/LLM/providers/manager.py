@@ -78,6 +78,7 @@ class ManagerConfig:
     ollama_model: str = "llama3.2"
     community_proxy_url: Optional[str] = None
     default_model: str = "gemini-1.5-flash"  # Gemini model to use
+    preferred_provider: Optional[str] = None  # Explicit provider preference: "gemini", "community-proxy", "ollama"
     
     # Behavior settings
     enable_fallback: bool = True
@@ -220,6 +221,24 @@ class ProviderManager:
     
     def _build_priority_order(self) -> None:
         """Build the priority order for provider selection."""
+        # If user explicitly set preferred_provider, put it first
+        if self.config.preferred_provider:
+            preferred = self.config.preferred_provider.lower()
+            # Normalize provider names
+            provider_map = {
+                "gemini": "gemini",
+                "community-proxy": "community-proxy",
+                "ollama": "ollama",
+            }
+            
+            if preferred in provider_map and provider_map[preferred] in self._providers:
+                # Put preferred provider first, others in default order
+                preferred_name = provider_map[preferred]
+                other_providers = [name for name in self._providers.keys() if name != preferred_name]
+                self._priority_order = [preferred_name] + other_providers
+                logger.debug(f"Provider priority order (preferred={preferred}): {self._priority_order}")
+                return
+        
         # Sort by tier priority
         tier_priority = {
             ProviderTier.BYOK: 0,
