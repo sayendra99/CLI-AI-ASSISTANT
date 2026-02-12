@@ -302,37 +302,37 @@ class SystemDetector:
 class ModelRecommender:
     """Recommends appropriate Ollama models based on system capabilities"""
     
-    # Model recommendations with requirements
+    # Model recommendations with requirements (Updated for 2026)
     MODELS = {
         ModelSize.TINY: {
             "model": "qwen2.5-coder:1.5b",
             "min_ram_gb": 4,
             "optimal_ram_gb": 6,
-            "description": "Fastest, for resource-constrained systems"
+            "description": "Ultra-fast, excellent for low-end systems. Best tiny model for coding."
         },
         ModelSize.SMALL: {
             "model": "qwen2.5-coder:3b",
             "min_ram_gb": 6,
             "optimal_ram_gb": 8,
-            "description": "Good balance of speed and quality"
+            "description": "Perfect balance of speed and quality. Great for daily use."
         },
         ModelSize.MEDIUM: {
             "model": "qwen2.5-coder:7b",
             "min_ram_gb": 10,
             "optimal_ram_gb": 16,
-            "description": "High quality, moderate speed"
+            "description": "RECOMMENDED: State-of-the-art free coding model (2025). Best quality-to-performance ratio."
         },
         ModelSize.LARGE: {
-            "model": "codellama:13b",
+            "model": "qwen2.5-coder:14b",
             "min_ram_gb": 20,
             "optimal_ram_gb": 32,
-            "description": "Excellent quality, slower"
+            "description": "Highest quality for complex tasks. Rivals paid models."
         },
         ModelSize.XLARGE: {
-            "model": "codellama:34b",
-            "min_ram_gb": 40,
-            "optimal_ram_gb": 64,
-            "description": "Best quality, requires powerful hardware"
+            "model": "deepseek-coder-v2:16b",
+            "min_ram_gb": 24,
+            "optimal_ram_gb": 32,
+            "description": "Premium quality code generation. Best free model for advanced tasks."
         }
     }
     
@@ -341,28 +341,29 @@ class ModelRecommender:
         
         available_ram = caps.ram_available_gb
         has_powerful_gpu = caps.has_gpu and caps.gpu_vram_gb and caps.gpu_vram_gb >= 8
+        has_moderate_gpu = caps.has_gpu and caps.gpu_vram_gb and caps.gpu_vram_gb >= 4
         
-        # Decision tree for model selection
-        if available_ram >= 40 and has_powerful_gpu:
+        # Decision tree for model selection (Updated for 2026)
+        if available_ram >= 24 and has_powerful_gpu:
             size = ModelSize.XLARGE
             speed = "medium"
-            reason = "High-end system with powerful GPU"
-        elif available_ram >= 20 and (has_powerful_gpu or caps.cpu_count_physical >= 8):
+            reason = "High-end system with powerful GPU detected"
+        elif available_ram >= 18 and (has_powerful_gpu or caps.cpu_count_physical >= 8):
             size = ModelSize.LARGE
-            speed = "medium"
-            reason = "High-end system"
-        elif available_ram >= 12 and caps.cpu_count_physical >= 4:
+            speed = "fast"
+            reason = "High-end system with excellent resources"
+        elif available_ram >= 12 and (has_moderate_gpu or caps.cpu_count_physical >= 4):
             size = ModelSize.MEDIUM
             speed = "fast"
-            reason = "Mid-range system with good CPU"
-        elif available_ram >= 8:
+            reason = "Mid-range system - perfect for qwen2.5-coder:7b (BEST MODEL)"
+        elif available_ram >= 7:
             size = ModelSize.SMALL
-            speed = "fast"
-            reason = "Entry-level system"
+            speed = "very fast"
+            reason = "Moderate system - optimal for daily use"
         else:
             size = ModelSize.TINY
-            speed = "very fast"
-            reason = "Resource-constrained system"
+            speed = "ultra fast"
+            reason = "Resource-efficient system - ultra-fast responses"
         
         model_info = self.MODELS[size]
         

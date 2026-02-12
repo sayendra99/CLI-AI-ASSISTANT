@@ -52,19 +52,108 @@ class OllamaProvider(LLMProvider):
     display_name = "Ollama (Local)"
     tier = ProviderTier.LOCAL
     
-    # Recommended models for coding tasks
+    # Best free coding models for 2026 - Optimized for Rocket CLI
+    # Listed in recommended order (best quality to fastest)
     RECOMMENDED_MODELS = [
-        "llama3.2",
-        "codellama",
-        "deepseek-coder",
-        "mistral",
-        "phi3",
-        "qwen2.5-coder",
+        "qwen2.5-coder:7b",          # BEST: State-of-the-art coding model (Jan 2025)
+        "qwen2.5-coder:14b",         # Highest quality for powerful systems
+        "deepseek-coder-v2:16b",     # Excellent code generation and understanding
+        "codegemma:7b",              # Google's specialized code model
+        "codellama:13b",             # Meta's proven coding specialist
+        "qwen2.5-coder:3b",          # Fast, good for moderate systems
+        "phi3.5:latest",             # Microsoft's efficient small model
+        "deepseek-coder:6.7b",       # Balanced performance
+        "codellama:7b",              # Reliable fallback
+        "qwen2.5-coder:1.5b",        # Ultra-fast for low-end systems
     ]
+    
+    # Model metadata for intelligent selection
+    MODEL_INFO = {
+        "qwen2.5-coder:7b": {
+            "params": "7B",
+            "ram_min": 10,
+            "ram_optimal": 16,
+            "specialty": "Best all-around coding model",
+            "size_gb": 4.7,
+            "speed": "fast",
+        },
+        "qwen2.5-coder:14b": {
+            "params": "14B",
+            "ram_min": 20,
+            "ram_optimal": 32,
+            "specialty": "Highest quality, complex code tasks",
+            "size_gb": 8.9,
+            "speed": "medium",
+        },
+        "qwen2.5-coder:3b": {
+            "params": "3B",
+            "ram_min": 6,
+            "ram_optimal": 8,
+            "specialty": "Fast responses, good quality",
+            "size_gb": 2.0,
+            "speed": "very_fast",
+        },
+        "qwen2.5-coder:1.5b": {
+            "params": "1.5B",
+            "ram_min": 4,
+            "ram_optimal": 6,
+            "specialty": "Ultra-fast for resource-limited systems",
+            "size_gb": 1.0,
+            "speed": "ultra_fast",
+        },
+        "deepseek-coder-v2:16b": {
+            "params": "16B",
+            "ram_min": 24,
+            "ram_optimal": 32,
+            "specialty": "Excellent code generation and debugging",
+            "size_gb": 9.8,
+            "speed": "medium",
+        },
+        "codegemma:7b": {
+            "params": "7B",
+            "ram_min": 10,
+            "ram_optimal": 16,
+            "specialty": "Google's specialized code understanding",
+            "size_gb": 5.0,
+            "speed": "fast",
+        },
+        "codellama:13b": {
+            "params": "13B",
+            "ram_min": 18,
+            "ram_optimal": 24,
+            "specialty": "Meta's proven code generation",
+            "size_gb": 7.4,
+            "speed": "medium",
+        },
+        "codellama:7b": {
+            "params": "7B",
+            "ram_min": 10,
+            "ram_optimal": 16,
+            "specialty": "Reliable, well-tested",
+            "size_gb": 3.8,
+            "speed": "fast",
+        },
+        "phi3.5:latest": {
+            "params": "3.8B",
+            "ram_min": 6,
+            "ram_optimal": 8,
+            "specialty": "Microsoft's efficient reasoning model",
+            "size_gb": 2.3,
+            "speed": "very_fast",
+        },
+        "deepseek-coder:6.7b": {
+            "params": "6.7B",
+            "ram_min": 9,
+            "ram_optimal": 12,
+            "specialty": "Balanced quality and speed",
+            "size_gb": 3.8,
+            "speed": "fast",
+        },
+    }
     
     def __init__(
         self,
-        model: str = "llama3.2",
+        model: str = "qwen2.5-coder:7b",  # Default to best free model
         base_url: Optional[str] = None,
         timeout: float = 120.0,  # Local inference can be slow
     ):
@@ -72,6 +161,7 @@ class OllamaProvider(LLMProvider):
         
         Args:
             model: Model name to use (must be pulled in Ollama)
+                   Default: qwen2.5-coder:7b - Best free coding model (2026)
             base_url: Ollama API URL (default: http://localhost:11434)
             timeout: Request timeout in seconds (longer for local inference)
         """
@@ -351,8 +441,9 @@ class OllamaProvider(LLMProvider):
             async with session.get(f"{self.base_url}/api/tags") as response:
                 if response.status == 200:
                     data = await response.json()
+                    # Include full model names with tags
                     self._available_models = [
-                        m.get("name", "").split(":")[0] 
+                        m.get("name", "") 
                         for m in data.get("models", [])
                     ]
                     return self._available_models
@@ -361,6 +452,51 @@ class OllamaProvider(LLMProvider):
             logger.debug(f"Failed to list Ollama models: {e}")
         
         return self.RECOMMENDED_MODELS
+    
+    def get_model_info(self, model_name: str) -> Dict[str, Any]:
+        """Get metadata for a specific model.
+        
+        Args:
+            model_name: Name of the model
+            
+        Returns:
+            Dictionary with model metadata (params, RAM requirements, etc.)
+        """
+        return self.MODEL_INFO.get(model_name, {
+            "params": "Unknown",
+            "ram_min": 8,
+            "ram_optimal": 16,
+            "specialty": "General purpose",
+            "size_gb": 5.0,
+            "speed": "medium",
+        })
+    
+    def recommend_model_for_system(self, ram_gb: float, has_gpu: bool = False) -> str:
+        """Recommend best model based on system resources.
+        
+        Args:
+            ram_gb: Available RAM in GB
+            has_gpu: Whether system has a capable GPU
+            
+        Returns:
+            Recommended model name
+        """
+        # Adjust RAM requirements if GPU available (can offload to VRAM)
+        ram_multiplier = 0.7 if has_gpu else 1.0
+        
+        for model_name in self.RECOMMENDED_MODELS:
+            info = self.get_model_info(model_name)
+            required_ram = info["ram_min"] * ram_multiplier
+            
+            if ram_gb >= required_ram:
+                logger.info(
+                    f"Recommended model: {model_name} "
+                    f"({info['params']} params, {info['specialty']})"
+                )
+                return model_name
+        
+        # Fallback to smallest model
+        return "qwen2.5-coder:1.5b"
     
     async def pull_model(self, model_name: str) -> bool:
         """Pull a model from Ollama library.

@@ -1,0 +1,21 @@
+# Include documentation and configuration files
+include README.md
+include LICENSE
+include ROCKET_CLI_GUIDE.md
+include TESTING_AND_USER_GUIDE.md
+include pytest.ini
+include requirements.txt
+
+# Include locale translations
+recursive-include locales *.po *.pot
+
+# Exclude unnecessary files
+exclude .env
+exclude .env.example
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .DS_Store
+recursive-exclude TEST *
+recursive-exclude apps *
+recursive-exclude .venv *
+recursive-exclude .git *
