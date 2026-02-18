@@ -12,6 +12,21 @@ import typer
 from rich.console import Console
 from rich.logging import RichHandler
 
+# Fix Windows UTF-8 encoding for emojis
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
+# Import Phase 1 enhancements
+from Rocket.Utils.error_handler import ExceptionWrapper
+from Rocket.CLI.wizard import ProjectWizard
+from Rocket.Utils.templates import TemplateManager
+from Rocket.Utils.deployer import DeploymentManager
+from Rocket.Utils.reviewer import CodeReviewer
+
 # Configure logging with Rich formatting
 logging.basicConfig(
     level=logging.WARNING,  # Only show warnings and errors by default
@@ -45,16 +60,11 @@ def chat(
         rocket chat -m "Create a FastAPI REST API with authentication" --stream
         rocket chat -m "Design a Kubernetes deployment for a microservice"
     """
-    try:
+    with ExceptionWrapper(show_traceback=False):
         from Rocket.CLI.commands import handle_chat
         
         # Run async handler synchronously
         asyncio.run(handle_chat(message=message, stream=stream))
-        
-    except Exception as e:
-        console.print(f"[red]❌ Error in chat command: {str(e)}[/red]")
-        logger.exception("Chat command failed")
-        raise typer.Exit(1)
 
 
 @app.command("generate")
@@ -75,7 +85,7 @@ def generate(
         rocket generate "Docker config for Node.js app" -o Dockerfile
         rocket generate "K8s deployment manifest" --language yaml --output deployment.yaml --stream
     """
-    try:
+    with ExceptionWrapper(show_traceback=False):
         from Rocket.CLI.commands import handle_generate
         
         logger.info(f"🔧 Generate command: {description[:50]}... (Language: {language})")
@@ -91,11 +101,6 @@ def generate(
             stream=stream,
             output_file=output_file
         ))
-        
-    except Exception as e:
-        console.print(f"[red]❌ Error in generate command: {str(e)}[/red]")
-        logger.exception("Generate command failed")
-        raise typer.Exit(1)
 
 
 @app.command("explain")
@@ -160,7 +165,7 @@ def debug(
         rocket debug --file app.py
         rocket debug -c "CORS error when accessing API" --language javascript --stream
     """
-    try:
+    with ExceptionWrapper(show_traceback=False):
         from Rocket.CLI.commands import handle_debug
         
         # Validate input
@@ -177,14 +182,6 @@ def debug(
             language=language,
             stream=stream
         ))
-        
-    except FileNotFoundError:
-        console.print(f"[red]❌ Error: File not found: {file}[/red]")
-        raise typer.Exit(1)
-    except Exception as e:
-        console.print(f"[red]❌ Error in debug command: {str(e)}[/red]")
-        logger.exception("Debug command failed")
-        raise typer.Exit(1)
 
 
 @app.command("optimize")
@@ -404,6 +401,129 @@ def shell(
         console.print(f"[red]❌ Error in shell mode: {str(e)}[/red]")
         logger.exception("Shell mode failed")
         raise typer.Exit(1)
+
+
+@app.command("start")
+def start():
+    """
+    🚀 Start interactive project wizard for beginners.
+    
+    Guides you through creating a complete project step-by-step:
+    - Choose project type (Portfolio, Blog, Todo, E-commerce, etc.)
+    - Answer simple questions about your project
+    - Get complete project with best practices
+    - From idea to deployed in 15-60 minutes!
+    
+    Perfect for: Non-tech, Newbies, Junior Engineers
+    
+    Examples:
+        rocket start
+    """
+    with ExceptionWrapper(show_traceback=False):
+        ProjectWizard.run()
+
+
+@app.command("templates")
+def templates(
+    category: Optional[str] = typer.Option(None, "--category", "-c", help="Filter by category: beginner, intermediate, advanced"),
+    search: Optional[str] = typer.Option(None, "--search", "-s", help="Search templates by keyword"),
+    show: Optional[str] = typer.Option(None, "--show", help="Show details of specific template by ID"),
+    use: Optional[str] = typer.Option(None, "--use", "-u", help="Create project from template (provide template ID)"),
+    name: Optional[str] = typer.Option(None, "--name", "-n", help="Project name when using template")
+):
+    """
+    📦 Browse and use professional project templates.
+    
+    8 ready-to-use templates from beginner to advanced:
+    - Portfolio, Blog, Todo App, Recipe Organizer
+    - Weather Dashboard, E-commerce, Social Media, Analytics
+    
+    Examples:
+        rocket templates                           # List all templates
+        rocket templates --category beginner       # Filter beginners
+        rocket templates --search portfolio        # Search templates
+        rocket templates --show portfolio-nextjs   # Show details
+        rocket templates --use portfolio-nextjs --name my-portfolio
+    """
+    with ExceptionWrapper(show_traceback=False):
+        if show:
+            # Show template details
+            TemplateManager.show_template_details(show)
+        elif use:
+            # Use template to create project
+            if not name:
+                console.print("[red]❌ Error: Provide --name when using a template[/red]")
+                console.print("[yellow]Example: rocket templates --use portfolio-nextjs --name my-portfolio[/yellow]")
+                raise typer.Exit(1)
+            TemplateManager.use_template(use, name)
+        else:
+            # List templates with optional filters
+            TemplateManager.list_templates(category=category, tag=search)
+
+
+@app.command("deploy")
+def deploy(
+    path: str = typer.Option(".", "--path", "-p", help="Path to project directory"),
+    production: bool = typer.Option(True, "--production/--preview", help="Deploy to production (default) or preview"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompts")
+):
+    """
+    🚀 Deploy your project to Vercel with one command.
+    
+    Auto-detects your project type (Next.js, React, Vue, Astro, etc.),
+    creates deployment configuration, and deploys to production.
+    
+    From local code to live URL in under 2 minutes!
+    
+    Supported Frameworks:
+    - Next.js, React (Vite/CRA), Vue.js, Astro
+    - Flask, FastAPI (Python APIs)
+    - Static HTML sites
+    
+    Examples:
+        rocket deploy                    # Deploy current directory to production
+        rocket deploy --preview          # Deploy to preview URL
+        rocket deploy --path ./my-app    # Deploy specific project
+        rocket deploy -y                 # Skip confirmations (auto-deploy)
+    """
+    with ExceptionWrapper(show_traceback=False):
+        DeploymentManager.deploy_project(
+            project_path=path,
+            production=production,
+            auto_confirm=yes
+        )
+
+
+@app.command("review")
+def review(
+    path: str = typer.Option(".", "--path", "-p", help="Path to project directory"),
+    security: bool = typer.Option(True, "--security/--no-security", help="Check for security vulnerabilities"),
+    performance: bool = typer.Option(True, "--performance/--no-performance", help="Check for performance issues"),
+    best_practices: bool = typer.Option(True, "--best-practices/--no-best-practices", help="Check coding best practices")
+):
+    """
+    🔍 AI-powered code review for security, performance, and quality.
+    
+    Analyzes your codebase and provides actionable suggestions:
+    - 🔒 Security vulnerabilities (SQL injection, hardcoded secrets, etc.)
+    - ⚡ Performance issues (nested loops, inefficient code)
+    - ✨ Best practices (missing docstrings, code style)
+    
+    Supports: Python, JavaScript, TypeScript, React
+    
+    Examples:
+        rocket review                        # Full review (security + performance + best practices)
+        rocket review --path ./src           # Review specific directory
+        rocket review --no-best-practices    # Skip best practices checks
+        rocket review --security             # Security scan only
+    """
+    with ExceptionWrapper(show_traceback=False):
+        CodeReviewer.review_project(
+            project_path=path,
+            include_security=security,
+            include_performance=performance,
+            include_best_practices=best_practices
+        )
 
 
 def main():
