@@ -21,6 +21,7 @@ Example:
 """
 
 import asyncio
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, AsyncIterator, Dict, List, Optional, Type
@@ -41,6 +42,8 @@ from .base import (
 from .gemini import GeminiProvider
 from .community_proxy import CommunityProxyProvider
 from .ollama import OllamaProvider
+from .openai_compat import OpenAICompatProvider
+from .scoring import ProviderScorer
 
 logger = get_logger(__name__)
 
@@ -80,6 +83,11 @@ class ManagerConfig:
     default_model: str = "gemini-1.5-flash"  # Gemini model to use
     preferred_provider: Optional[str] = None  # Explicit provider preference: "gemini", "community-proxy", "ollama"
     
+    # OpenAI-compatible local provider (LM Studio, vLLM, Jan.ai, llama.cpp)
+    openai_compat_url: Optional[str] = None
+    openai_compat_model: str = "local-model"
+    openai_compat_api_key: str = "not-needed"
+
     # Behavior settings
     enable_fallback: bool = True
     max_retries: int = 2
@@ -120,15 +128,20 @@ class ProviderManager:
             config: Manager configuration (optional, will use defaults/env)
         """
         self.config = config or ManagerConfig()
-        
+
         # Provider instances (created during initialize)
         self._providers: Dict[str, ProviderStatus] = {}
-        
+
         # Priority order for fallback
         self._priority_order: List[str] = []
-        
+
         # Initialized flag
         self._initialized = False
+
+        # Scorer created ONCE so metrics accumulate across requests
+        self._scorer = ProviderScorer(
+            preferred_provider=self.config.preferred_provider
+        )
     
     async def initialize(self) -> None:
         """Initialize all providers and check availability.
@@ -158,14 +171,24 @@ class ProviderManager:
             )
         )
         
-        # 3. Local Ollama (lowest priority, but always available fallback)
+        # 3. Local Ollama
         providers_to_check.append(
             OllamaProvider(
                 model=self.config.ollama_model,
                 base_url=self.config.ollama_url,
             )
         )
-        
+
+        # 4. OpenAI-compatible local provider (LM Studio, vLLM, Jan.ai, llama.cpp)
+        if self.config.openai_compat_url:
+            providers_to_check.append(
+                OpenAICompatProvider({
+                    "openai_compat_url":     self.config.openai_compat_url,
+                    "openai_compat_model":   self.config.openai_compat_model,
+                    "openai_compat_api_key": self.config.openai_compat_api_key,
+                })
+            )
+
         # Check availability for all providers concurrently
         availability_checks = [
             self._check_provider(provider)
@@ -226,9 +249,10 @@ class ProviderManager:
             preferred = self.config.preferred_provider.lower()
             # Normalize provider names
             provider_map = {
-                "gemini": "gemini",
+                "gemini":         "gemini",
                 "community-proxy": "community-proxy",
-                "ollama": "ollama",
+                "ollama":          "ollama",
+                "openai_compat":   "openai_compat",
             }
             
             if preferred in provider_map and provider_map[preferred] in self._providers:
@@ -262,26 +286,51 @@ class ProviderManager:
         self._priority_order = [name for name, _ in sorted_providers]
         logger.debug(f"Provider priority order: {self._priority_order}")
     
-    def _get_next_provider(self, exclude: Optional[List[str]] = None) -> Optional[ProviderStatus]:
-        """Get the next available provider based on priority.
-        
+    def _get_next_provider(
+        self,
+        exclude: Optional[List[str]] = None,
+        options: Optional[GenerateOptions] = None,
+    ) -> Optional[ProviderStatus]:
+        """Get the next available provider using scorer-based selection.
+
         Args:
-            exclude: List of provider names to skip
-            
+            exclude: Provider names already tried (skip these)
+            options: Real generation options for context-aware scoring
+
         Returns:
-            Next healthy provider status, or None if all exhausted
+            Best healthy provider status, or None if all exhausted
         """
         exclude = exclude or []
-        
-        for name in self._priority_order:
-            if name in exclude:
-                continue
-            
-            status = self._providers.get(name)
-            if status and status.is_healthy:
-                return status
-        
-        return None
+
+        eligible_providers = [
+            self._providers[name].provider
+            for name in self._priority_order
+            if name not in exclude
+            and name in self._providers
+            and self._providers[name].is_healthy
+        ]
+
+        if not eligible_providers:
+            return None
+
+        # Use persistent scorer (created in __init__) with real options
+        best_provider = self._scorer.get_best_provider(
+            eligible_providers,
+            options or GenerateOptions(prompt=""),
+        )
+
+        if best_provider is None:
+            return None
+
+        return next(
+            (
+                self._providers[name]
+                for name in self._priority_order
+                if name in self._providers
+                and self._providers[name].provider is best_provider
+            ),
+            None,
+        )
     
     async def generate(self, options: GenerateOptions) -> GenerateResponse:
         """Generate text using the best available provider.
@@ -306,32 +355,47 @@ class ProviderManager:
         rate_limit_errors: List[RateLimitError] = []
         
         while True:
-            # Get next provider to try
-            status = self._get_next_provider(exclude=tried_providers)
-            
+            # Pass real options so scorer can make context-aware decisions
+            status = self._get_next_provider(
+                exclude=tried_providers,
+                options=options,
+            )
+
             if status is None:
                 # All providers exhausted
                 break
-            
+
             provider = status.provider
             tried_providers.append(provider.name)
-            
+
             logger.debug(f"Trying provider: {provider.name}")
-            
+            start = time.monotonic()
+
             try:
                 response = await provider.generate(options)
-                
-                # Success! Reset failure count
+                latency_ms = (time.monotonic() - start) * 1000
+
+                # Record SUCCESS so scorer improves future routing
+                self._scorer.record_request(
+                    provider_name=provider.name,
+                    latency_ms=latency_ms,
+                    tokens_used=response.usage.total_tokens,
+                    success=True,
+                )
+
+                # Reset failure count on success
                 status.consecutive_failures = 0
-                
+
                 # Update rate limit info if provided
                 if response.rate_limit:
                     status.rate_limit = response.rate_limit
-                
+
                 logger.debug(f"Generation successful using {provider.name}")
                 return response
-                
+
             except RateLimitError as e:
+                latency_ms = (time.monotonic() - start) * 1000
+                self._scorer.record_request(provider.name, latency_ms, 0, False)
                 logger.warning(f"Provider {provider.name} rate limited: {e}")
                 status.consecutive_failures += 1
                 status.rate_limit = RateLimitInfo(
@@ -342,26 +406,30 @@ class ProviderManager:
                 )
                 rate_limit_errors.append(e)
                 last_error = e
-                
+
                 if not self.config.enable_fallback:
                     raise
-                
+
             except (ConfigError, ProviderUnavailableError) as e:
+                latency_ms = (time.monotonic() - start) * 1000
+                self._scorer.record_request(provider.name, latency_ms, 0, False)
                 logger.warning(f"Provider {provider.name} unavailable: {e}")
                 status.available = False
                 status.last_error = str(e)
                 status.consecutive_failures += 1
                 last_error = e
-                
+
                 if not self.config.enable_fallback:
                     raise
-                
+
             except ProviderError as e:
+                latency_ms = (time.monotonic() - start) * 1000
+                self._scorer.record_request(provider.name, latency_ms, 0, False)
                 logger.error(f"Provider {provider.name} error: {e}")
                 status.consecutive_failures += 1
                 status.last_error = str(e)
                 last_error = e
-                
+
                 if not self.config.enable_fallback:
                     raise
         
@@ -559,6 +627,16 @@ class ProviderManager:
         )
         self._build_priority_order()
     
+    def get_cost_summary(self) -> Dict[str, Dict]:
+        """Return per-provider cost, latency and usage summary.
+
+        Used by: rocket stats command
+
+        Returns:
+            Dict mapping provider name to metrics dict
+        """
+        return self._scorer.get_summary()
+
     async def close(self) -> None:
         """Close all provider connections."""
         for status in self._providers.values():

@@ -15,9 +15,17 @@ class Settings(BaseSettings):
     temperature: float = Field(default=0.7, alias="TEMPERATURE")
     max_retries: int = Field(default=3, alias="MAX_RETRIES")
     retry_delay: float = Field(default=1.0, alias="RETRY_DELAY")
+
+    # OpenAI Compat Configuration
+    openai_compat_url: str = Field(default="", alias="OPENAI_COMPAT_URL")
+    openai_compat_model: str = Field(default="", alias="OPENAI_COMPAT_MODEL")
+    openai_compat_api_key: str = Field(default="", alias="OPENAI_COMPAT_API_KEY")
     
     # App Configuration
     data_dir: Path = Field(default=Path.home() / ".rocket" / "DATA_DIR")
+
+    # Provider Selection
+    preferred_provider: str = Field(default="", alias="PREFERRED_PROVIDER")
     model_config = SettingsConfigDict(
         env_file=".env", 
         env_file_encoding="utf-8",
