@@ -22,7 +22,7 @@ Example:
 
 import asyncio
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace as dataclasses_replace
 from datetime import datetime
 from typing import Any, AsyncIterator, Dict, List, Optional, Type
 
@@ -81,8 +81,8 @@ class ManagerConfig:
     ollama_model: str = "llama3.2"
     community_proxy_url: Optional[str] = None
     default_model: str = "gemini-1.5-flash"  # Gemini model to use
-    preferred_provider: Optional[str] = None  # Explicit provider preference: "gemini", "community-proxy", "ollama"
-    
+    preferred_provider: Optional[str] = None  # Explicit provider preference: "gemini", "community-proxy", "ollama", "openai_compat"
+
     # OpenAI-compatible local provider (LM Studio, vLLM, Jan.ai, llama.cpp)
     openai_compat_url: Optional[str] = None
     openai_compat_model: str = "local-model"
@@ -302,32 +302,32 @@ class ProviderManager:
         """
         exclude = exclude or []
 
-        eligible_providers = [
-            self._providers[name].provider
+        eligible_provider_statuses = [
+            self._providers[name] # Pass the whole ProviderStatus object
             for name in self._priority_order
             if name not in exclude
             and name in self._providers
             and self._providers[name].is_healthy
         ]
 
-        if not eligible_providers:
+        if not eligible_provider_statuses:
             return None
 
         # Use persistent scorer (created in __init__) with real options
-        best_provider = self._scorer.get_best_provider(
-            eligible_providers,
+        best_provider_instance = self._scorer.get_best_provider(
+            eligible_provider_statuses, # Now passes ProviderStatus objects
             options or GenerateOptions(prompt=""),
         )
 
-        if best_provider is None:
+        if best_provider_instance is None:
             return None
 
+        # Find the original ProviderStatus object that corresponds to the best_provider_instance
         return next(
             (
-                self._providers[name]
-                for name in self._priority_order
-                if name in self._providers
-                and self._providers[name].provider is best_provider
+                status
+                for status in eligible_provider_statuses
+                if status.provider is best_provider_instance
             ),
             None,
         )
@@ -506,29 +506,49 @@ class ProviderManager:
         if not self._initialized:
             await self.initialize()
         
-        # Get best provider
-        status = self._get_next_provider()
-        
+        # Get best provider, passing real options for scorer context
+        status = self._get_next_provider(options=options)
+
         if status is None:
             raise ProviderError(
                 "No providers available for streaming.",
                 provider="none"
             )
-        
+
         provider = status.provider
         logger.debug(f"Streaming with provider: {provider.name}")
-        
+
+        start = time.monotonic()
+        total_chars = 0
+
         try:
             async for chunk in provider.generate_stream(options):
+                total_chars += len(chunk)
                 yield chunk
-        except RateLimitError as e:
-            # Can't easily fallback during streaming
+
+            # Record success after stream completes
+            latency_ms = (time.monotonic() - start) * 1000
+            self._scorer.record_request(
+                provider_name=provider.name,
+                latency_ms=latency_ms,
+                tokens_used=total_chars // 4,  # rough estimate: ~4 chars per token
+                success=True,
+            )
+            status.consecutive_failures = 0
+
+        except RateLimitError:
+            latency_ms = (time.monotonic() - start) * 1000
+            self._scorer.record_request(provider.name, latency_ms, 0, False)
+            status.consecutive_failures += 1
             raise
+
         except ProviderError as e:
-            # Try to fallback to non-streaming
+            latency_ms = (time.monotonic() - start) * 1000
+            self._scorer.record_request(provider.name, latency_ms, 0, False)
+            status.consecutive_failures += 1
+            # Fallback to non-streaming — dataclasses_replace is safe, .to_dict() does not exist
             logger.warning(f"Streaming failed, falling back to non-streaming: {e}")
-            options_copy = GenerateOptions(**options.to_dict())
-            options_copy.stream = False
+            options_copy = dataclasses_replace(options, stream=False)
             response = await self.generate(options_copy)
             yield response.text
     
@@ -592,7 +612,12 @@ class ProviderManager:
                 old_status.available = False
                 old_status.last_error = str(result)
             else:
-                self._providers[name] = result
+                new_status = result
+                # Carry over failure count when still unavailable after refresh
+                # so a consistently broken provider doesn't reset its penalty
+                if not new_status.available:
+                    new_status.consecutive_failures = old_status.consecutive_failures
+                self._providers[name] = new_status
         
         # Rebuild priority order
         self._build_priority_order()
@@ -643,12 +668,15 @@ class ProviderManager:
             if hasattr(status.provider, '_close_session'):
                 try:
                     await status.provider._close_session()
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(
+                        f"[Manager] Failed to close {status.provider.name}: {e}"
+                    )
 
 
 # Singleton instance for easy access
 _manager: Optional[ProviderManager] = None
+_manager_lock = asyncio.Lock()  # prevents race condition on concurrent first calls
 
 
 async def get_manager(config: Optional[ManagerConfig] = None) -> ProviderManager:
@@ -661,11 +689,12 @@ async def get_manager(config: Optional[ManagerConfig] = None) -> ProviderManager
         The global ProviderManager instance
     """
     global _manager
-    
-    if _manager is None:
-        _manager = ProviderManager(config)
-        await _manager.initialize()
-    
+
+    async with _manager_lock:
+        if _manager is None:
+            _manager = ProviderManager(config)
+            await _manager.initialize()
+
     return _manager
 
 
